@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/context'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { UserIdentity } from '@/lib/types'
 
-const BASE_PROFILES = [
-  { identity: 'yihan' as const, name: 'Yihan', initials: 'YD', color: '#534AB7', email: 'yihan@union.app' },
-  { identity: 'sun'   as const, name: 'Sun',   initials: 'SR', color: '#1D9E75', email: 'sun@union.app' },
+const IDENTITIES: { identity: UserIdentity; email: string }[] = [
+  { identity: 'yihan', email: 'yihan@union.app' },
+  { identity: 'sun',   email: 'sun@union.app'   },
 ]
 
 const PAD = ['1','2','3','4','5','6','7','8','9','','0','⌫']
@@ -38,26 +39,29 @@ const slideVariants = {
 }
 
 export default function LoginPage() {
-  const { user, loading, signIn } = useAuth()
+  const { user, loading, signIn, resolveProfile } = useAuth()
   const router = useRouter()
 
   const [screen, setScreen] = useState<Screen>('password')
   const [direction, setDirection] = useState(1)
   const [sharedPassword, setSharedPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedProfile, setSelectedProfile] = useState<typeof BASE_PROFILES[0] | null>(null)
+  const [selectedIdentity, setSelectedIdentity] = useState<UserIdentity | null>(null)
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const heroText = useTypewriter('money together', 55, 200)
 
+  const selectedProfile = selectedIdentity ? resolveProfile(selectedIdentity) : null
+  const selectedEmail = IDENTITIES.find(i => i.identity === selectedIdentity)?.email ?? ''
+
   useEffect(() => {
     if (!loading && user) router.replace('/dashboard/overview')
   }, [user, loading, router])
 
   useEffect(() => {
-    if (pin.length === 4 && screen === 'pin' && selectedProfile) {
+    if (pin.length === 4 && screen === 'pin' && selectedIdentity) {
       handlePinSubmit()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,9 +79,9 @@ export default function LoginPage() {
   }
 
   async function handlePinSubmit() {
-    if (!selectedProfile || submitting) return
+    if (!selectedIdentity || !selectedEmail || submitting) return
     setSubmitting(true)
-    const { error } = await signIn(selectedProfile.email, sharedPassword.trim() + pin)
+    const { error } = await signIn(selectedEmail, sharedPassword.trim() + pin)
     if (error) {
       setPinError(true)
       setTimeout(() => { setPinError(false); setPin(''); setSubmitting(false) }, 800)
@@ -134,13 +138,17 @@ export default function LoginPage() {
                   transition={{ delay: 0.1, duration: 0.4 }}
                 >
                   <motion.div
-                    className="w-16 h-16 rounded-full flex items-center justify-center text-white text-lg font-semibold mb-4"
+                    className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white text-lg font-semibold mb-4"
                     style={{ backgroundColor: selectedProfile.color }}
                     initial={{ scale: 0.7, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.05 }}
                   >
-                    {selectedProfile.initials}
+                    {selectedProfile.avatar_url ? (
+                      <img src={selectedProfile.avatar_url} alt={selectedProfile.name} className="w-full h-full object-cover" />
+                    ) : (
+                      selectedProfile.initials
+                    )}
                   </motion.div>
                   <p className="text-xl mb-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
                     {selectedProfile.name}
@@ -243,36 +251,43 @@ export default function LoginPage() {
                 </motion.div>
 
                 <div className="space-y-3">
-                  {BASE_PROFILES.map((profile, i) => (
-                    <motion.button
-                      key={profile.identity}
-                      onClick={() => { setSelectedProfile(profile); setPin(''); goTo('pin', 1) }}
-                      className="relative w-full flex items-center gap-4 p-5 rounded-2xl text-left active:scale-[0.99]"
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid rgba(0,0,0,0.07)',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                      }}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + i * 0.07, duration: 0.35 }}
-                      whileHover={{ boxShadow: '0 3px 12px rgba(0,0,0,0.09)' }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div
-                        className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold"
-                        style={{ backgroundColor: profile.color }}
+                  {IDENTITIES.map(({ identity }, i) => {
+                    const profile = resolveProfile(identity)
+                    return (
+                      <motion.button
+                        key={identity}
+                        onClick={() => { setSelectedIdentity(identity); setPin(''); goTo('pin', 1) }}
+                        className="relative w-full flex items-center gap-4 p-5 rounded-2xl text-left active:scale-[0.99]"
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid rgba(0,0,0,0.07)',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                        }}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.07, duration: 0.35 }}
+                        whileHover={{ boxShadow: '0 3px 12px rgba(0,0,0,0.09)' }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        {profile.initials}
-                      </div>
-                      <span className="text-xl flex-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                        {profile.name}
-                      </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                        <polyline points="9 18 15 12 9 6"/>
-                      </svg>
-                    </motion.button>
-                  ))}
+                        <div
+                          className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
+                          style={{ backgroundColor: profile.color }}
+                        >
+                          {profile.avatar_url ? (
+                            <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                          ) : (
+                            profile.initials
+                          )}
+                        </div>
+                        <span className="text-xl flex-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
+                          {profile.name}
+                        </span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                          <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                      </motion.button>
+                    )
+                  })}
                 </div>
 
                 <motion.button

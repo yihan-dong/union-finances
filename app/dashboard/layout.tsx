@@ -101,10 +101,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </span>
           <div className="flex items-center gap-2.5">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold flex-shrink-0 overflow-hidden"
               style={{ backgroundColor: user.color }}
             >
-              {user.initials}
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                user.initials
+              )}
             </div>
             <button
               onClick={signOut}

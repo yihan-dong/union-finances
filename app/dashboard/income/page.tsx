@@ -1,0 +1,313 @@
+'use client'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/context'
+import { supabase } from '@/lib/supabase'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ShineBorder } from '@/components/ui/shine-border'
+import type { Income, IncomeType, UserIdentity } from '@/lib/types'
+import { formatCurrency, formatDate } from '@/lib/utils'
+
+const INCOME_TYPES: IncomeType[] = ['salary', 'freelance', 'investment', 'gift', 'other']
+
+const USER_COLORS: Record<string, string> = {
+  yihan: '#534AB7',
+  sun: '#1D9E75',
+}
+
+const TYPE_COLORS: Record<IncomeType, string> = {
+  salary:     '#6366F1',
+  freelance:  '#10B981',
+  investment: '#F59E0B',
+  gift:       '#EC4899',
+  other:      '#94A3B8',
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.25 } }),
+}
+
+interface AddIncomeForm {
+  amount: string
+  source: string
+  type: IncomeType
+  date: string
+  owner: UserIdentity
+  recurring: boolean
+}
+
+const defaultForm = (user: UserIdentity): AddIncomeForm => ({
+  amount: '',
+  source: '',
+  type: 'salary',
+  date: new Date().toISOString().slice(0, 10),
+  owner: user,
+  recurring: false,
+})
+
+export default function IncomePage() {
+  const { user } = useAuth()
+  const [incomes, setIncomes] = useState<Income[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState<AddIncomeForm>(defaultForm(user?.identity || 'yihan'))
+  const [saving, setSaving] = useState(false)
+
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+
+  async function fetchIncome() {
+    const startDate = `${year}-${String(month).padStart(2,'0')}-01`
+    const endDate = `${year}-${String(month).padStart(2,'0')}-31`
+    const { data } = await supabase.from('income').select('*')
+      .gte('date', startDate).lte('date', endDate)
+      .order('date', { ascending: false })
+    setIncomes((data as Income[]) || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchIncome() }, [])
+
+  async function handleAdd() {
+    if (!form.amount || !form.source || saving) return
+    setSaving(true)
+    await supabase.from('income').insert({
+      amount: parseFloat(form.amount),
+      source: form.source.trim(),
+      type: form.type,
+      date: form.date,
+      owner: form.owner,
+      recurring: form.recurring,
+    })
+    await fetchIncome()
+    setForm(defaultForm(user?.identity || 'yihan'))
+    setShowForm(false)
+    setSaving(false)
+  }
+
+  async function handleDelete(id: string) {
+    await supabase.from('income').delete().eq('id', id)
+    setIncomes(prev => prev.filter(i => i.id !== id))
+  }
+
+  const yihanTotal = incomes.filter(i => i.owner === 'yihan').reduce((s, i) => s + Number(i.amount), 0)
+  const sunTotal = incomes.filter(i => i.owner === 'sun').reduce((s, i) => s + Number(i.amount), 0)
+  const combined = yihanTotal + sunTotal
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center pt-32">
+        <motion.div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
+          animate={{ scale: [1,1.5,1], opacity: [0.3,1,0.3] }} transition={{ duration: 1.2, repeat: Infinity }} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-5 pt-2 pb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h2 className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>income</h2>
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={() => { setShowForm(true); setForm(defaultForm(user?.identity || 'yihan')) }}
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-light"
+          style={{ backgroundColor: user?.color || '#1D9E75' }}
+        >
+          +
+        </motion.button>
+      </div>
+
+      {/* Monthly summary banner */}
+      <motion.div
+        custom={0} variants={fadeUp} initial="hidden" animate="visible"
+        className="rounded-3xl p-5 mb-4"
+        style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+      >
+        <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'rgba(0,0,0,0.3)' }}>this month</p>
+        <p className="text-3xl font-semibold mb-3" style={{ color: '#1D9E75' }}>{formatCurrency(combined)}</p>
+        <div className="flex gap-4">
+          <div>
+            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: '#534AB7' }} />
+            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(yihanTotal)}</p>
+            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>Yihan</p>
+          </div>
+          <div>
+            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: '#1D9E75' }} />
+            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(sunTotal)}</p>
+            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>Sun</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Income list */}
+      {incomes.length === 0 ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center pt-12">
+          <p className="text-sm" style={{ color: 'rgba(0,0,0,0.3)' }}>no income recorded yet</p>
+        </motion.div>
+      ) : (
+        <div className="space-y-2">
+          {incomes.map((inc, i) => (
+            <motion.div
+              key={inc.id}
+              custom={i + 1} variants={fadeUp} initial="hidden" animate="visible"
+              className="relative rounded-2xl p-4 overflow-hidden"
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            >
+              <ShineBorder shineColor={USER_COLORS[inc.owner]} duration={18} />
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] font-semibold"
+                  style={{ backgroundColor: USER_COLORS[inc.owner] }}
+                >
+                  {inc.owner === 'yihan' ? 'YD' : 'SR'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{inc.source}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded-full text-white"
+                      style={{ backgroundColor: TYPE_COLORS[inc.type] + 'CC' }}
+                    >
+                      {inc.type}
+                    </span>
+                    <span className="text-[9px]" style={{ color: 'rgba(0,0,0,0.35)' }}>{formatDate(inc.date)}</span>
+                    {inc.recurring && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}>
+                        ↻ recurring
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <p className="text-base font-semibold" style={{ color: '#1D9E75' }}>
+                    +{formatCurrency(Number(inc.amount))}
+                  </p>
+                  <button onClick={() => handleDelete(inc.id)} className="p-1 rounded-full" style={{ color: 'rgba(0,0,0,0.22)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Income Sheet */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowForm(false)}
+          >
+            <motion.div
+              className="bg-white rounded-t-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>add income</h3>
+                <button onClick={() => setShowForm(false)} style={{ color: 'rgba(0,0,0,0.32)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>amount</label>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
+                <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
+                <input
+                  type="number" inputMode="decimal"
+                  value={form.amount}
+                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                  placeholder="0.00"
+                  className="flex-1 text-2xl font-semibold bg-transparent outline-none"
+                  style={{ color: '#1A1A1A' }}
+                  autoFocus
+                />
+              </div>
+
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>source</label>
+              <input
+                type="text" value={form.source}
+                onChange={e => setForm(f => ({ ...f, source: e.target.value }))}
+                placeholder="e.g. employer, client, bank"
+                className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
+                style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
+              />
+
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>type</label>
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {INCOME_TYPES.map(t => (
+                  <button key={t}
+                    onClick={() => setForm(f => ({ ...f, type: t }))}
+                    className="px-3 py-1.5 rounded-full text-xs transition-all"
+                    style={form.type === t
+                      ? { backgroundColor: TYPE_COLORS[t], color: '#fff' }
+                      : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.5)' }
+                    }
+                  >{t}</button>
+                ))}
+              </div>
+
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>date</label>
+              <input
+                type="date" value={form.date}
+                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
+                style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
+              />
+
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>owner</label>
+              <div className="flex gap-2 mb-4">
+                {(['yihan', 'sun'] as UserIdentity[]).map(id => (
+                  <button key={id}
+                    onClick={() => setForm(f => ({ ...f, owner: id }))}
+                    className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
+                    style={form.owner === id
+                      ? { backgroundColor: USER_COLORS[id], color: '#fff' }
+                      : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
+                    }
+                  >{id === 'yihan' ? 'Yihan' : 'Sun'}</button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between mb-6 px-1">
+                <div>
+                  <p className="text-sm" style={{ color: '#1A1A1A' }}>recurring</p>
+                  <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.35)' }}>repeats monthly</p>
+                </div>
+                <button
+                  onClick={() => setForm(f => ({ ...f, recurring: !f.recurring }))}
+                  className="w-12 h-6 rounded-full transition-all relative"
+                  style={{ backgroundColor: form.recurring ? (user?.color || '#534AB7') : 'rgba(0,0,0,0.12)' }}
+                >
+                  <div
+                    className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all"
+                    style={{ left: form.recurring ? '26px' : '2px' }}
+                  />
+                </button>
+              </div>
+
+              <button
+                onClick={handleAdd}
+                disabled={!form.amount || !form.source || saving}
+                className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
+                style={{ backgroundColor: user?.color || '#1D9E75' }}
+              >
+                {saving ? 'saving…' : 'add income'}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

@@ -242,7 +242,7 @@ export default function BudgetPage() {
       {/* Add/Edit Budget Sheet */}
       <AnimatePresence>
         {showForm && (
-          <motion.div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+          <motion.div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => { setShowForm(false); setEditingBudget(null) }}>
             <motion.div className="bg-white rounded-t-3xl p-6 w-full max-w-md"

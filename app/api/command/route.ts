@@ -29,9 +29,9 @@ Action types (use only these):
 Rules:
 - paid_by: "I paid" or unspecified → current user ("${user}"); "Sun paid" → "sun"; "Yihan paid" → "yihan"; "we paid" / "we both" / "household" / "both of us" → "both"
 - currency: "40,000 riel" / "40k riel" / "₭40,000" / "KHR 40000" → amount=40000, currency="KHR"; default currency="USD" if not specified
-- bucket: default to "utility" unless the expense sounds like luxury/status/impressing others → "status"
-  - "utility" examples: groceries, rent, electricity, medicine, transport, gym, work tools
-  - "status" examples: luxury brand, fancy restaurant to impress, expensive gadget for show, designer clothes
+- bucket: default to "utility" unless the expense is for impressing others or not for household benefit → "status"
+  - "utility" (for us) examples: groceries, rent, electricity, medicine, transport, gym, work tools, meals at home
+  - "status" (for others) examples: luxury brand gifts, fancy restaurant to impress clients/others, expensive gadget for show, designer clothes to impress
 - Category inference: "dinner/lunch/coffee/food/restaurant/grocery/supermarket" → "food & dining"; "uber/taxi/bus/train/grab/fuel" → "transport"; "rent/electric/water/wifi/utilities" → "rent & utilities"; "netflix/spotify/subscription" → "subscriptions"; "gym/doctor/medicine/pharmacy" → "health"; "movie/concert/bar/entertainment" → "entertainment"; "flight/hotel/airbnb/travel" → "travel"; "clothes/shoes/amazon/shopping" → "shopping"; otherwise "other"
 - Relative dates: "today" → ${today}; "yesterday" → one day before; "last night" → yesterday
 - For income: "my salary/paycheck" → type="salary", owner=current user; "freelance/side job" → type="freelance"; "investment/dividend" → type="investment"; "gift" → type="gift"

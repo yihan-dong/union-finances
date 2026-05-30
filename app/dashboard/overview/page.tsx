@@ -232,11 +232,11 @@ export default function OverviewPage() {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.3)' }}>
-              {saved >= 0 ? 'saved' : 'overspent'}
+              balance
             </p>
             <p className="text-3xl font-semibold tracking-tight leading-none"
               style={{ color: saved >= 0 ? '#1D9E75' : '#EF4444' }}>
-              {saved < 0 ? '−' : ''}{formatCurrency(Math.abs(saved))}
+              {saved < 0 ? '−' : '+'}{formatCurrency(Math.abs(saved))}
             </p>
           </div>
           {totalIncome > 0 && (
@@ -301,7 +301,7 @@ export default function OverviewPage() {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <span className="flex items-center gap-1.5 text-[11px]" style={{ color: statusPct > 0.3 ? '#D97706' : 'rgba(0,0,0,0.45)' }}>
-                  <StarIcon /> status
+                  <StarIcon /> for others
                 </span>
                 <span className="text-[11px] font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(statusSpend)}</span>
               </div>
@@ -314,7 +314,7 @@ export default function OverviewPage() {
 
           {statusPct > 0.3 && (
             <p className="text-[10px] mt-2.5 pt-2.5" style={{ color: 'rgba(0,0,0,0.38)', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-              {(statusPct * 100).toFixed(0)}% on status spending — is it worth it?
+              {(statusPct * 100).toFixed(0)}% spent for others — is it worth it?
             </p>
           )}
         </motion.div>
@@ -344,7 +344,7 @@ export default function OverviewPage() {
                       <p className="text-[9px]" style={{ color: 'rgba(0,0,0,0.32)' }}>{formatDate(exp.date)}</p>
                       {exp.bucket === 'status' && (
                         <span className="text-[9px] flex items-center gap-0.5" style={{ color: '#D97706' }}>
-                          <StarIcon /> status
+                          <StarIcon /> for others
                         </span>
                       )}
                     </div>

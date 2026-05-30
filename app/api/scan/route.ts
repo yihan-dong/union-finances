@@ -39,7 +39,7 @@ Return this exact format:
   "description": "<what was bought — focus on the items/service purchased, not just the merchant. E.g. 'coffee & croissant', 'groceries', 'taxi ride', 'dinner for two'. If specific items are visible on the receipt, name them briefly. Keep under 30 chars.>",
   "category": "<one of: food & dining | rent & utilities | transport | shopping | health | entertainment | travel | subscriptions | other>",
   "date": "<YYYY-MM-DD, use today if not visible>",
-  "bucket": "<utility or status — utility means practical/essential for life, status means impressing others or luxury>",
+  "bucket": "<utility or status — utility means practical/essential for your household life, status means spending to impress others or pure luxury>",
   "currency": "<USD or KHR>"
 }
 

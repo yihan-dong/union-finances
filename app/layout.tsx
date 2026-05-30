@@ -13,10 +13,11 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'union finances',
-    startupImage: '/apple-touch-icon.png',
+    startupImage: '/bitcoinicon.png',
   },
   icons: {
-    apple: '/apple-touch-icon.png',
+    icon: '/bitcoinicon.png',
+    apple: '/bitcoinicon.png',
   },
 }
 export const viewport: Viewport = {

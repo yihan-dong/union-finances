@@ -12,12 +12,12 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     icons: [
       {
-        src: '/apple-touch-icon.png',
+        src: '/bitcoinicon.png',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: '/apple-touch-icon.png',
+        src: '/bitcoinicon.png',
         sizes: '512x512',
         type: 'image/png',
       },

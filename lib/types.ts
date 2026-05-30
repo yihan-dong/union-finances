@@ -1,4 +1,5 @@
 export type UserIdentity = 'yihan' | 'sun'
+export type PaidByType = 'yihan' | 'sun' | 'both'
 export type BucketType = 'utility' | 'status'
 export type CurrencyType = 'USD' | 'KHR'
 export type ExpenseCategory = 'food & dining' | 'rent & utilities' | 'transport' | 'shopping' | 'health' | 'entertainment' | 'travel' | 'subscriptions' | 'other'
@@ -10,7 +11,7 @@ export interface Expense {
   description: string
   category: ExpenseCategory
   date: string
-  paid_by: UserIdentity
+  paid_by: PaidByType
   bucket: BucketType
   currency: CurrencyType
   note: string | null

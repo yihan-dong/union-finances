@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/lib/context'
+import TreeBackground from '@/components/TreeBackground'
 
 const TABS = [
   { href: '/dashboard/overview', label: 'overview', Icon: OverviewIcon },
@@ -102,6 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="h-screen flex flex-col max-w-md mx-auto relative overflow-hidden" style={{ backgroundColor: '#F7F6F3' }}>
+      <TreeBackground />
       <div className="relative flex flex-col h-full" style={{ zIndex: 1 }}>
         {/* Top bar */}
         <header className="flex-shrink-0 flex items-center justify-between px-6 pt-12 pb-3">

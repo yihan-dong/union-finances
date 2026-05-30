@@ -21,13 +21,13 @@ Return ONLY valid JSON — no markdown, no explanation:
 }
 
 Action types (use only these):
-{ "type": "add_expense", "data": { "amount": number, "description": "string", "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "date": "YYYY-MM-DD", "paid_by": "yihan"|"sun", "bucket": "utility"|"status", "currency": "USD"|"KHR", "note": "" } }
+{ "type": "add_expense", "data": { "amount": number, "description": "string", "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "date": "YYYY-MM-DD", "paid_by": "yihan"|"sun"|"both", "bucket": "utility"|"status", "currency": "USD"|"KHR", "note": "" } }
 { "type": "add_income", "data": { "amount": number, "source": "string", "type": "salary"|"freelance"|"investment"|"gift"|"other", "date": "YYYY-MM-DD", "owner": "yihan"|"sun", "recurring": boolean } }
 { "type": "set_budget", "data": { "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "monthly_limit": number } }
 { "type": "add_goal", "data": { "name": "string", "target_amount": number, "deadline": "YYYY-MM-DD"|null } }
 
 Rules:
-- paid_by: "I paid" or unspecified → current user ("${user}"); "Sun paid" → "sun"; "Yihan paid" → "yihan"
+- paid_by: "I paid" or unspecified → current user ("${user}"); "Sun paid" → "sun"; "Yihan paid" → "yihan"; "we paid" / "we both" / "household" / "both of us" → "both"
 - currency: "40,000 riel" / "40k riel" / "₭40,000" / "KHR 40000" → amount=40000, currency="KHR"; default currency="USD" if not specified
 - bucket: default to "utility" unless the expense sounds like luxury/status/impressing others → "status"
   - "utility" examples: groceries, rent, electricity, medicine, transport, gym, work tools

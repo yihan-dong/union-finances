@@ -30,7 +30,6 @@ const fadeUp = {
 interface AddBudgetForm {
   category: ExpenseCategory
   monthly_limit: string
-  owner: 'yihan' | 'sun' | 'shared'
 }
 
 export default function BudgetPage() {
@@ -40,7 +39,7 @@ export default function BudgetPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
-  const [form, setForm] = useState<AddBudgetForm>({ category: 'food & dining', monthly_limit: '', owner: 'shared' })
+  const [form, setForm] = useState<AddBudgetForm>({ category: 'food & dining', monthly_limit: '' })
   const [saving, setSaving] = useState(false)
 
   const now = new Date()
@@ -83,11 +82,10 @@ export default function BudgetPage() {
     if (!form.monthly_limit || saving) return
     setSaving(true)
     if (editingBudget) {
-      await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit), owner: form.owner })
-        .eq('id', editingBudget.id)
+      await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', editingBudget.id)
     } else {
       const { data: existing } = await supabase.from('budgets').select('id')
-        .eq('category', form.category).eq('owner', form.owner)
+        .eq('category', form.category).eq('owner', 'shared')
         .eq('month', viewMonth).eq('year', viewYear).single()
       if (existing) {
         await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', existing.id)
@@ -95,7 +93,7 @@ export default function BudgetPage() {
         await supabase.from('budgets').insert({
           category: form.category,
           monthly_limit: parseFloat(form.monthly_limit),
-          owner: form.owner,
+          owner: 'shared',
           month: viewMonth,
           year: viewYear,
         })
@@ -104,7 +102,7 @@ export default function BudgetPage() {
     await fetchData()
     setShowForm(false)
     setEditingBudget(null)
-    setForm({ category: 'food & dining', monthly_limit: '', owner: 'shared' })
+    setForm({ category: 'food & dining', monthly_limit: '' })
     setSaving(false)
   }
 
@@ -119,10 +117,6 @@ export default function BudgetPage() {
     return '#1D9E75'
   }
 
-  // Map budgets by category for quick lookup
-  const budgetMap = new Map(budgets.map(b => [b.category, b]))
-
-  // Categories with budgets
   const budgetedCategories = budgets.map(b => b.category)
   const unbudgetedCategories = CATEGORIES.filter(c => !budgetedCategories.includes(c))
 
@@ -142,7 +136,7 @@ export default function BudgetPage() {
         <h2 className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>budget</h2>
         <motion.button
           whileTap={{ scale: 0.92 }}
-          onClick={() => { setShowForm(true); setEditingBudget(null); setForm({ category: 'food & dining', monthly_limit: '', owner: 'shared' }) }}
+          onClick={() => { setShowForm(true); setEditingBudget(null); setForm({ category: 'food & dining', monthly_limit: '' }) }}
           className="w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-light"
           style={{ backgroundColor: user?.color || '#534AB7' }}
         >
@@ -159,9 +153,7 @@ export default function BudgetPage() {
         <button onClick={prevMonth} style={{ color: 'rgba(0,0,0,0.35)' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>
-          {monthNames[viewMonth - 1]} {viewYear}
-        </p>
+        <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{monthNames[viewMonth - 1]} {viewYear}</p>
         <button onClick={nextMonth} style={{ color: 'rgba(0,0,0,0.35)' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
@@ -188,15 +180,8 @@ export default function BudgetPage() {
                   <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{budget.category}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}>
-                    {budget.owner}
-                  </span>
                   <button
-                    onClick={() => {
-                      setEditingBudget(budget)
-                      setForm({ category: budget.category, monthly_limit: String(budget.monthly_limit), owner: budget.owner })
-                      setShowForm(true)
-                    }}
+                    onClick={() => { setEditingBudget(budget); setForm({ category: budget.category, monthly_limit: String(budget.monthly_limit) }); setShowForm(true) }}
                     style={{ color: 'rgba(0,0,0,0.3)' }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -212,18 +197,12 @@ export default function BudgetPage() {
                 </div>
               </div>
 
-              {/* Progress bar */}
               <div className="w-full h-1.5 rounded-full mb-2" style={{ backgroundColor: 'rgba(0,0,0,0.07)' }}>
-                <div
-                  className="h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${pct * 100}%`, backgroundColor: getProgressColor(pct) }}
-                />
+                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct * 100}%`, backgroundColor: getProgressColor(pct) }} />
               </div>
 
               <div className="flex justify-between">
-                <p className="text-xs" style={{ color: 'rgba(0,0,0,0.45)' }}>
-                  {formatCurrency(spent)} spent
-                </p>
+                <p className="text-xs" style={{ color: 'rgba(0,0,0,0.45)' }}>{formatCurrency(spent)} spent</p>
                 <p className="text-xs font-medium" style={{ color: remaining >= 0 ? '#1D9E75' : '#EF4444' }}>
                   {remaining >= 0 ? formatCurrency(remaining) + ' left' : formatCurrency(Math.abs(remaining)) + ' over'}
                 </p>
@@ -237,32 +216,22 @@ export default function BudgetPage() {
         {unbudgetedCategories.map((cat, i) => {
           const spent = spendByCategory[cat] || 0
           return (
-            <motion.div
-              key={cat}
-              custom={budgets.length + i + 1} variants={fadeUp} initial="hidden" animate="visible"
+            <motion.div key={cat} custom={budgets.length + i + 1} variants={fadeUp} initial="hidden" animate="visible"
               className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.04)', opacity: 0.6 }}
-            >
+              style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.04)', opacity: 0.6 }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat] + '66' }} />
                   <p className="text-sm" style={{ color: 'rgba(0,0,0,0.5)' }}>{cat}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {spent > 0 && (
-                    <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>{formatCurrency(spent)} spent</p>
-                  )}
-                  <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>no budget set</p>
+                  {spent > 0 && <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>{formatCurrency(spent)} spent</p>}
                   <button
-                    onClick={() => {
-                      setForm({ category: cat, monthly_limit: '', owner: 'shared' })
-                      setEditingBudget(null)
-                      setShowForm(true)
-                    }}
+                    onClick={() => { setForm({ category: cat, monthly_limit: '' }); setEditingBudget(null); setShowForm(true) }}
                     className="text-[10px] px-2 py-1 rounded-full"
                     style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}
                   >
-                    set
+                    set limit
                   </button>
                 </div>
               </div>
@@ -274,22 +243,15 @@ export default function BudgetPage() {
       {/* Add/Edit Budget Sheet */}
       <AnimatePresence>
         {showForm && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-end justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+          <motion.div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => { setShowForm(false); setEditingBudget(null) }}
-          >
-            <motion.div
-              className="bg-white rounded-t-3xl p-6 w-full max-w-md"
+            onClick={() => { setShowForm(false); setEditingBudget(null) }}>
+            <motion.div className="bg-white rounded-t-3xl p-6 w-full max-w-md"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-              onClick={e => e.stopPropagation()}
-            >
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }} onClick={e => e.stopPropagation()}>
+
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>
-                  {editingBudget ? 'edit budget' : 'set budget'}
-                </h3>
+                <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
                 <button onClick={() => { setShowForm(false); setEditingBudget(null) }} style={{ color: 'rgba(0,0,0,0.32)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -302,54 +264,30 @@ export default function BudgetPage() {
                   <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>category</label>
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {CATEGORIES.map(cat => (
-                      <button key={cat}
-                        onClick={() => setForm(f => ({ ...f, category: cat }))}
+                      <button key={cat} onClick={() => setForm(f => ({ ...f, category: cat }))}
                         className="px-3 py-1.5 rounded-full text-xs transition-all"
                         style={form.category === cat
                           ? { backgroundColor: CATEGORY_COLORS[cat], color: '#fff' }
                           : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.5)' }
-                        }
-                      >{cat}</button>
+                        }>{cat}</button>
                     ))}
                   </div>
                 </>
               )}
 
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>monthly limit</label>
-              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-6" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                 <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
-                <input
-                  type="number" inputMode="decimal"
-                  value={form.monthly_limit}
+                <input type="number" inputMode="decimal" value={form.monthly_limit}
                   onChange={e => setForm(f => ({ ...f, monthly_limit: e.target.value }))}
                   placeholder="0.00"
-                  className="flex-1 text-2xl font-semibold bg-transparent outline-none"
-                  style={{ color: '#1A1A1A' }}
-                  autoFocus
-                />
+                  className="flex-1 text-2xl font-semibold bg-transparent outline-none" style={{ color: '#1A1A1A' }} autoFocus />
               </div>
 
-              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>owner</label>
-              <div className="flex gap-2 mb-6">
-                {([['shared', 'shared'], ['yihan', 'Yihan'], ['sun', 'Sun']] as ['shared'|'yihan'|'sun', string][]).map(([val, label]) => (
-                  <button key={val}
-                    onClick={() => setForm(f => ({ ...f, owner: val }))}
-                    className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
-                    style={form.owner === val
-                      ? { backgroundColor: val === 'shared' ? '#1A1A1A' : val === 'yihan' ? '#534AB7' : '#1D9E75', color: '#fff' }
-                      : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
-                    }
-                  >{label}</button>
-                ))}
-              </div>
-
-              <button
-                onClick={handleSave}
-                disabled={!form.monthly_limit || saving}
+              <button onClick={handleSave} disabled={!form.monthly_limit || saving}
                 className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
-                style={{ backgroundColor: user?.color || '#534AB7' }}
-              >
-                {saving ? 'saving…' : editingBudget ? 'update budget' : 'set budget'}
+                style={{ backgroundColor: user?.color || '#534AB7' }}>
+                {saving ? 'saving…' : editingBudget ? 'update' : 'set budget'}
               </button>
             </motion.div>
           </motion.div>

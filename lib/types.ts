@@ -1,5 +1,5 @@
 export type UserIdentity = 'yihan' | 'sun'
-export type SplitType = 'even' | 'yihan' | 'sun'
+export type BucketType = 'utility' | 'status'
 export type ExpenseCategory = 'food & dining' | 'rent & utilities' | 'transport' | 'shopping' | 'health' | 'entertainment' | 'travel' | 'subscriptions' | 'other'
 export type IncomeType = 'salary' | 'freelance' | 'investment' | 'gift' | 'other'
 
@@ -10,7 +10,7 @@ export interface Expense {
   category: ExpenseCategory
   date: string
   paid_by: UserIdentity
-  split: SplitType
+  bucket: BucketType
   note: string | null
   created_at: string
 }

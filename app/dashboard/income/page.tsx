@@ -52,6 +52,7 @@ export default function IncomePage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<AddIncomeForm>(defaultForm(user?.identity || 'yihan'))
   const [saving, setSaving] = useState(false)
+  const [savingsTip, setSavingsTip] = useState<number | null>(null)
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -72,8 +73,9 @@ export default function IncomePage() {
   async function handleAdd() {
     if (!form.amount || !form.source || saving) return
     setSaving(true)
+    const amount = parseFloat(form.amount)
     await supabase.from('income').insert({
-      amount: parseFloat(form.amount),
+      amount,
       source: form.source.trim(),
       type: form.type,
       date: form.date,
@@ -84,6 +86,9 @@ export default function IncomePage() {
     setForm(defaultForm(user?.identity || 'yihan'))
     setShowForm(false)
     setSaving(false)
+    // Show 10% savings tip
+    setSavingsTip(amount)
+    setTimeout(() => setSavingsTip(null), 5000)
   }
 
   async function handleDelete(id: string) {
@@ -119,6 +124,29 @@ export default function IncomePage() {
         </motion.button>
       </div>
 
+      {/* 10% savings tip */}
+      <AnimatePresence>
+        {savingsTip !== null && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="rounded-2xl px-4 py-3 mb-3 flex items-center gap-3"
+            style={{ backgroundColor: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.15)' }}
+          >
+            <span className="text-lg">💡</span>
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#1D9E75' }}>
+                10% rule: save {formatCurrency(savingsTip * 0.1)} first
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(0,0,0,0.4)' }}>
+                treat it like rent — move it to a goal before spending
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Monthly summary banner */}
       <motion.div
         custom={0} variants={fadeUp} initial="hidden" animate="visible"
@@ -138,6 +166,12 @@ export default function IncomePage() {
             <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(sunTotal)}</p>
             <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>Sun</p>
           </div>
+          {combined > 0 && (
+            <div className="ml-auto text-right">
+              <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>10% target</p>
+              <p className="text-xs font-medium" style={{ color: '#1D9E75' }}>{formatCurrency(combined * 0.1)}</p>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -166,10 +200,7 @@ export default function IncomePage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{inc.source}</p>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span
-                      className="text-[9px] px-1.5 py-0.5 rounded-full text-white"
-                      style={{ backgroundColor: TYPE_COLORS[inc.type] + 'CC' }}
-                    >
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: TYPE_COLORS[inc.type] + 'CC' }}>
                       {inc.type}
                     </span>
                     <span className="text-[9px]" style={{ color: 'rgba(0,0,0,0.35)' }}>{formatDate(inc.date)}</span>
@@ -181,9 +212,10 @@ export default function IncomePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <p className="text-base font-semibold" style={{ color: '#1D9E75' }}>
-                    +{formatCurrency(Number(inc.amount))}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-base font-semibold" style={{ color: '#1D9E75' }}>+{formatCurrency(Number(inc.amount))}</p>
+                    <p className="text-[9px]" style={{ color: 'rgba(0,0,0,0.3)' }}>save {formatCurrency(Number(inc.amount) * 0.1)}</p>
+                  </div>
                   <button onClick={() => handleDelete(inc.id)} className="p-1 rounded-full" style={{ color: 'rgba(0,0,0,0.22)' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -221,7 +253,7 @@ export default function IncomePage() {
               </div>
 
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>amount</label>
-              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-1" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                 <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
                 <input
                   type="number" inputMode="decimal"
@@ -233,6 +265,11 @@ export default function IncomePage() {
                   autoFocus
                 />
               </div>
+              {form.amount && parseFloat(form.amount) > 0 && (
+                <p className="text-[10px] mb-3 px-1" style={{ color: '#1D9E75' }}>
+                  💡 10% = {formatCurrency(parseFloat(form.amount) * 0.1)} → add to a goal
+                </p>
+              )}
 
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>source</label>
               <input
@@ -265,7 +302,7 @@ export default function IncomePage() {
                 style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
               />
 
-              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>owner</label>
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>whose income</label>
               <div className="flex gap-2 mb-4">
                 {(['yihan', 'sun'] as UserIdentity[]).map(id => (
                   <button key={id}

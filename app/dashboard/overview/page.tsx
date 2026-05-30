@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
-import type { Expense, Income } from '@/lib/types'
+import type { Expense, Income, Goal } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -35,6 +35,7 @@ export default function OverviewPage() {
   const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [incomes, setIncomes] = useState<Income[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [command, setCommand] = useState('')
   const [cmdLoading, setCmdLoading] = useState(false)
@@ -50,12 +51,14 @@ export default function OverviewPage() {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`
     const endDate = `${year}-${String(month).padStart(2,'0')}-31`
 
-    const [{ data: expData }, { data: incData }] = await Promise.all([
+    const [{ data: expData }, { data: incData }, { data: goalData }] = await Promise.all([
       supabase.from('expenses').select('*').gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
       supabase.from('income').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('goals').select('*'),
     ])
     setExpenses((expData as Expense[]) || [])
     setIncomes((incData as Income[]) || [])
+    setGoals((goalData as Goal[]) || [])
     setLoading(false)
   }
 
@@ -64,33 +67,13 @@ export default function OverviewPage() {
   // Calculations
   const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
-  const netPosition = totalIncome - totalExpenses
+  const saved = totalIncome - totalExpenses
+  const savingsRate = totalIncome > 0 ? (saved / totalIncome) * 100 : 0
+  const wealth = goals.reduce((s, g) => s + Number(g.current_amount), 0)
 
-  const yihanPaid = expenses.filter(e => e.paid_by === 'yihan').reduce((s, e) => s + Number(e.amount), 0)
-  const sunPaid = expenses.filter(e => e.paid_by === 'sun').reduce((s, e) => s + Number(e.amount), 0)
-
-  // Balance calculation
-  // For each expense, what does each person owe?
-  let yihanOwes = 0 // what yihan should have paid total
-  let sunOwes = 0   // what sun should have paid total
-  expenses.forEach(e => {
-    const amt = Number(e.amount)
-    if (e.split === 'even') {
-      yihanOwes += amt / 2
-      sunOwes += amt / 2
-    } else if (e.split === 'yihan') {
-      yihanOwes += amt
-    } else if (e.split === 'sun') {
-      sunOwes += amt
-    }
-  })
-  // What they actually paid
-  // Net = what yihan owes - what yihan paid (positive means yihan is in debt to sun)
-  const yihanBalance = yihanOwes - yihanPaid // positive = yihan owes sun
-  const sunBalance = sunOwes - sunPaid       // positive = sun owes yihan
-
-  // Net settlement
-  const settlement = yihanBalance - sunBalance // positive = yihan owes sun net
+  const utilitySpend = expenses.filter(e => e.bucket === 'utility' || !e.bucket).reduce((s, e) => s + Number(e.amount), 0)
+  const statusSpend = expenses.filter(e => e.bucket === 'status').reduce((s, e) => s + Number(e.amount), 0)
+  const statusPct = totalExpenses > 0 ? statusSpend / totalExpenses : 0
 
   const recentExpenses = expenses.slice(0, 5)
 
@@ -108,7 +91,6 @@ export default function OverviewPage() {
       const json = await res.json()
       if (json.message) setCmdMessage(json.message)
 
-      // Execute actions
       for (const action of (json.actions || [])) {
         if (action.type === 'add_expense') {
           await supabase.from('expenses').insert(action.data)
@@ -116,25 +98,19 @@ export default function OverviewPage() {
           await supabase.from('income').insert(action.data)
         } else if (action.type === 'set_budget') {
           const { data: existing } = await supabase.from('budgets')
-            .select('id')
-            .eq('category', action.data.category)
-            .eq('owner', action.data.owner)
-            .eq('month', month)
-            .eq('year', year)
-            .single()
+            .select('id').eq('category', action.data.category)
+            .eq('owner', 'shared').eq('month', month).eq('year', year).single()
           if (existing) {
             await supabase.from('budgets').update({ monthly_limit: action.data.monthly_limit }).eq('id', existing.id)
           } else {
-            await supabase.from('budgets').insert({ ...action.data, month, year })
+            await supabase.from('budgets').insert({ ...action.data, owner: 'shared', month, year })
           }
         } else if (action.type === 'add_goal') {
           await supabase.from('goals').insert(action.data)
         }
       }
 
-      if ((json.actions || []).length > 0) {
-        fetchData()
-      }
+      if ((json.actions || []).length > 0) fetchData()
       setCommand('')
     } catch {
       setCmdMessage('something went wrong — try again')
@@ -166,89 +142,120 @@ export default function OverviewPage() {
         </h2>
       </motion.div>
 
-      {/* Net position card */}
+      {/* Household health card */}
       <motion.div
         custom={1} variants={fadeUp} initial="hidden" animate="visible"
-        className="relative rounded-3xl p-5 overflow-hidden"
-        style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-      >
-        <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'rgba(0,0,0,0.3)' }}>net position</p>
-        <div className="flex items-end justify-between">
-          <div>
-            <p
-              className="text-4xl font-semibold tracking-tight"
-              style={{ color: netPosition >= 0 ? '#1D9E75' : '#EF4444' }}
-            >
-              {netPosition < 0 ? '-' : ''}{formatCurrency(netPosition)}
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'rgba(0,0,0,0.35)' }}>
-              {netPosition >= 0 ? 'surplus' : 'deficit'} this month
-            </p>
-          </div>
-          <div className="text-right space-y-1">
-            <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>
-              <span style={{ color: '#1D9E75' }}>+{formatCurrency(totalIncome)}</span> income
-            </p>
-            <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>
-              <span style={{ color: '#EF4444' }}>−{formatCurrency(totalExpenses)}</span> spent
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Who paid what */}
-      <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible" className="grid grid-cols-2 gap-3">
-        {[
-          { name: 'Yihan', color: '#534AB7', paid: yihanPaid },
-          { name: 'Sun', color: '#1D9E75', paid: sunPaid },
-        ].map(p => (
-          <div
-            key={p.name}
-            className="rounded-3xl p-4"
-            style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-5 h-5 rounded-full" style={{ backgroundColor: p.color + '22' }}>
-                <div className="w-2 h-2 rounded-full mx-auto mt-1.5" style={{ backgroundColor: p.color }} />
-              </div>
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(0,0,0,0.3)' }}>{p.name}</p>
-            </div>
-            <p className="text-xl font-semibold" style={{ color: '#1A1A1A' }}>{formatCurrency(p.paid)}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(0,0,0,0.3)' }}>paid this month</p>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Balance */}
-      <motion.div
-        custom={3} variants={fadeUp} initial="hidden" animate="visible"
         className="rounded-3xl p-5"
         style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
       >
-        <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'rgba(0,0,0,0.3)' }}>balance</p>
-        {Math.abs(settlement) < 0.01 ? (
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#1D9E75' }} />
-            <p className="text-base" style={{ color: '#1A1A1A' }}>all settled up</p>
+        <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: 'rgba(0,0,0,0.3)' }}>household</p>
+
+        {/* Big saved number */}
+        <div className="mb-4">
+          <p
+            className="text-4xl font-semibold tracking-tight"
+            style={{ color: saved >= 0 ? '#1D9E75' : '#EF4444' }}
+          >
+            {saved < 0 ? '-' : ''}{formatCurrency(Math.abs(saved))}
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs" style={{ color: 'rgba(0,0,0,0.4)' }}>
+              {saved >= 0 ? 'saved' : 'overspent'} this month
+            </p>
+            {totalIncome > 0 && (
+              <span
+                className="text-[9px] px-2 py-0.5 rounded-full font-medium"
+                style={{
+                  backgroundColor: savingsRate >= 10 ? 'rgba(29,158,117,0.12)' : 'rgba(245,158,11,0.12)',
+                  color: savingsRate >= 10 ? '#1D9E75' : '#D97706',
+                }}
+              >
+                {savingsRate.toFixed(0)}% saved
+              </span>
+            )}
           </div>
-        ) : settlement > 0 ? (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: '#534AB7' }}>YD</div>
-            <p className="text-sm" style={{ color: 'rgba(0,0,0,0.5)' }}>owes</p>
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: '#1D9E75' }}>SR</div>
-            <p className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{formatCurrency(Math.abs(settlement))}</p>
+        </div>
+
+        {/* Income / Spent row */}
+        <div className="flex gap-4 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.28)' }}>income</p>
+            <p className="text-base font-semibold" style={{ color: '#1D9E75' }}>+{formatCurrency(totalIncome)}</p>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: '#1D9E75' }}>SR</div>
-            <p className="text-sm" style={{ color: 'rgba(0,0,0,0.5)' }}>owes</p>
-            <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: '#534AB7' }}>YD</div>
-            <p className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>{formatCurrency(Math.abs(settlement))}</p>
+          <div style={{ width: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
+          <div>
+            <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.28)' }}>spent</p>
+            <p className="text-base font-semibold" style={{ color: '#EF4444' }}>−{formatCurrency(totalExpenses)}</p>
           </div>
+        </div>
+
+        {/* 10% nudge */}
+        {totalIncome > 0 && savingsRate < 10 && saved > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 px-3 py-2 rounded-2xl"
+            style={{ backgroundColor: 'rgba(245,158,11,0.08)' }}
+          >
+            <p className="text-[10px]" style={{ color: '#D97706' }}>
+              💡 10% rule: aim to save {formatCurrency(totalIncome * 0.1)}/mo — you&apos;re {formatCurrency(totalIncome * 0.1 - saved)} away
+            </p>
+          </motion.div>
         )}
       </motion.div>
 
-      {/* Recent transactions */}
+      {/* Wealth card */}
+      {wealth > 0 && (
+        <motion.div
+          custom={2} variants={fadeUp} initial="hidden" animate="visible"
+          className="rounded-3xl p-5"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+        >
+          <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.3)' }}>what you&apos;ve kept</p>
+          <p className="text-3xl font-semibold tracking-tight" style={{ color: '#534AB7' }}>{formatCurrency(wealth)}</p>
+          <p className="text-xs mt-1" style={{ color: 'rgba(0,0,0,0.35)' }}>across {goals.length} savings goal{goals.length !== 1 ? 's' : ''}</p>
+        </motion.div>
+      )}
+
+      {/* Spending buckets */}
+      {totalExpenses > 0 && (
+        <motion.div
+          custom={3} variants={fadeUp} initial="hidden" animate="visible"
+          className="rounded-3xl p-5"
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+        >
+          <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: 'rgba(0,0,0,0.3)' }}>spending breakdown</p>
+
+          <div className="space-y-2.5">
+            <div>
+              <div className="flex justify-between mb-1">
+                <p className="text-xs" style={{ color: 'rgba(0,0,0,0.5)' }}>🏠 for us</p>
+                <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(utilitySpend)}</p>
+              </div>
+              <div className="w-full h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.07)' }}>
+                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${((1 - statusPct) * 100)}%`, backgroundColor: '#1D9E75' }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-1">
+                <p className="text-xs" style={{ color: 'rgba(0,0,0,0.5)' }}>✨ status</p>
+                <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(statusSpend)}</p>
+              </div>
+              <div className="w-full h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.07)' }}>
+                <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${statusPct * 100}%`, backgroundColor: statusPct > 0.3 ? '#F59E0B' : '#94A3B8' }} />
+              </div>
+            </div>
+          </div>
+
+          {statusPct > 0.3 && (
+            <p className="text-[10px] mt-2.5" style={{ color: 'rgba(0,0,0,0.4)' }}>
+              {(statusPct * 100).toFixed(0)}% of spending is status — is it worth it?
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* Recent expenses */}
       {recentExpenses.length > 0 && (
         <motion.div
           custom={4} variants={fadeUp} initial="hidden" animate="visible"
@@ -259,13 +266,13 @@ export default function OverviewPage() {
           <div className="space-y-3">
             {recentExpenses.map(exp => (
               <div key={exp.id} className="flex items-center gap-3">
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: CATEGORY_COLORS[exp.category] || '#94A3B8' }}
-                />
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[exp.category] || '#94A3B8' }} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate" style={{ color: '#1A1A1A' }}>{exp.description}</p>
-                  <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.35)' }}>{exp.category} · {formatDate(exp.date)}</p>
+                  <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.35)' }}>
+                    {exp.category} · {formatDate(exp.date)}
+                    {exp.bucket === 'status' && <span className="ml-1">✨</span>}
+                  </p>
                 </div>
                 <p className="text-sm font-semibold flex-shrink-0" style={{ color: '#EF4444' }}>
                   −{formatCurrency(Number(exp.amount))}
@@ -307,7 +314,7 @@ export default function OverviewPage() {
             value={command}
             onChange={e => setCommand(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleCommand()}
-            placeholder='e.g. "dinner for two, $45, split evenly"'
+            placeholder='e.g. "spent $45 on groceries"'
             className="flex-1 text-xs bg-transparent outline-none"
             style={{ color: '#1A1A1A' }}
           />

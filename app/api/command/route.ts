@@ -7,34 +7,36 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return NextResponse.json({ error: 'API key not set' }, { status: 500 })
 
-  const system = `You are a finance assistant for a couples' app used by Yihan and Sun.
+  const system = `You are a finance assistant for a couples' app used by Yihan and Sun. They share all finances — there is no splitting or owing each other. Everything is household money.
+
 Parse the user's natural language command and return a JSON object with finance actions to execute.
 
 Today's date: ${today}
-Current user identity: ${user} (display name: ${userName})
+Current user: ${user} (display name: ${userName})
 
-Return ONLY valid JSON in this exact format — no markdown, no explanation:
+Return ONLY valid JSON — no markdown, no explanation:
 {
   "actions": [...],
   "message": "brief friendly confirmation"
 }
 
 Action types (use only these):
-{ "type": "add_expense", "data": { "amount": number, "description": "string", "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "date": "YYYY-MM-DD", "paid_by": "yihan"|"sun", "split": "even"|"yihan"|"sun", "note": "string or empty" } }
+{ "type": "add_expense", "data": { "amount": number, "description": "string", "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "date": "YYYY-MM-DD", "paid_by": "yihan"|"sun", "bucket": "utility"|"status", "note": "" } }
 { "type": "add_income", "data": { "amount": number, "source": "string", "type": "salary"|"freelance"|"investment"|"gift"|"other", "date": "YYYY-MM-DD", "owner": "yihan"|"sun", "recurring": boolean } }
-{ "type": "set_budget", "data": { "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "monthly_limit": number, "owner": "yihan"|"sun"|"shared" } }
-{ "type": "add_goal", "data": { "name": "string", "target_amount": number, "deadline": "YYYY-MM-DD"|null, "owner": "yihan"|"sun"|"both" } }
+{ "type": "set_budget", "data": { "category": "food & dining"|"rent & utilities"|"transport"|"shopping"|"health"|"entertainment"|"travel"|"subscriptions"|"other", "monthly_limit": number } }
+{ "type": "add_goal", "data": { "name": "string", "target_amount": number, "deadline": "YYYY-MM-DD"|null } }
 
 Rules:
-- "we/us/together/split" → split="even", paid_by = current user ("${user}")
-- "I paid" → paid_by = current user ("${user}")
-- "Sun paid" / "Yihan paid" → paid_by accordingly
-- Category inference: "dinner/lunch/coffee/food/restaurant/grocery" → "food & dining"; "uber/taxi/bus/train/transport/grab" → "transport"; "rent/electric/water/wifi/utilities" → "rent & utilities"; "netflix/spotify/subscription" → "subscriptions"; "gym/doctor/medicine/health" → "health"; "movie/concert/entertainment" → "entertainment"; "flight/hotel/travel" → "travel"; "clothes/shoes/amazon/shopping" → "shopping"; otherwise "other"
-- Relative dates: "today" → ${today}; "yesterday" → one day before ${today}; "last night" → yesterday; resolve "this [weekday]" and "last [weekday]" relative to ${today}
-- For income: "my salary/paycheck" → type="salary", owner=current user; "freelance/side job" → type="freelance"; "interest/dividend/stocks" → type="investment"; "gift/birthday money" → type="gift"
-- note field: use empty string "" if nothing extra to note
-- message: short, friendly, 1 sentence — e.g. "Added $45 dinner split with Sun!"
-- If unclear or unrelated, return { "actions": [], "message": "didn't quite catch that — try: 'we spent $50 on dinner' or 'I got paid $3000 salary'" }`
+- paid_by: "I paid" or unspecified → current user ("${user}"); "Sun paid" → "sun"; "Yihan paid" → "yihan"
+- bucket: default to "utility" unless the expense sounds like luxury/status/impressing others → "status"
+  - "utility" examples: groceries, rent, electricity, medicine, transport, gym, work tools
+  - "status" examples: luxury brand, fancy restaurant to impress, expensive gadget for show, designer clothes
+- Category inference: "dinner/lunch/coffee/food/restaurant/grocery/supermarket" → "food & dining"; "uber/taxi/bus/train/grab/fuel" → "transport"; "rent/electric/water/wifi/utilities" → "rent & utilities"; "netflix/spotify/subscription" → "subscriptions"; "gym/doctor/medicine/pharmacy" → "health"; "movie/concert/bar/entertainment" → "entertainment"; "flight/hotel/airbnb/travel" → "travel"; "clothes/shoes/amazon/shopping" → "shopping"; otherwise "other"
+- Relative dates: "today" → ${today}; "yesterday" → one day before; "last night" → yesterday
+- For income: "my salary/paycheck" → type="salary", owner=current user; "freelance/side job" → type="freelance"; "investment/dividend" → type="investment"; "gift" → type="gift"
+- note: always empty string ""
+- message: short, friendly, 1 sentence — e.g. "Logged $45 groceries 🏠"
+- If unclear: return { "actions": [], "message": "didn't catch that — try: 'we spent $50 on dinner' or 'Sun got paid $2000'" }`
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',

@@ -1,10 +1,10 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
-import type { Expense, ExpenseCategory, SplitType, UserIdentity } from '@/lib/types'
+import type { Expense, ExpenseCategory, BucketType, UserIdentity } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -39,7 +39,7 @@ interface AddExpenseForm {
   category: ExpenseCategory
   date: string
   paid_by: UserIdentity
-  split: SplitType
+  bucket: BucketType
   note: string
 }
 
@@ -49,7 +49,7 @@ const defaultForm = (user: UserIdentity): AddExpenseForm => ({
   category: 'food & dining',
   date: new Date().toISOString().slice(0, 10),
   paid_by: user,
-  split: 'even',
+  bucket: 'utility',
   note: '',
 })
 
@@ -62,14 +62,26 @@ function groupByDate(expenses: Expense[]): { date: string; items: Expense[] }[] 
   return Array.from(map.entries()).map(([date, items]) => ({ date, items }))
 }
 
+function CameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  )
+}
+
 export default function ExpensesPage() {
   const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCat, setFilterCat] = useState<ExpenseCategory | 'all'>('all')
+  const [filterBucket, setFilterBucket] = useState<BucketType | 'all'>('all')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<AddExpenseForm>(defaultForm(user?.identity || 'yihan'))
   const [saving, setSaving] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -87,6 +99,39 @@ export default function ExpensesPage() {
 
   useEffect(() => { fetchExpenses() }, [])
 
+  async function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScanning(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(',')[1]
+        const mimeType = file.type || 'image/jpeg'
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ image: base64, mimeType }),
+        })
+        const data = await res.json()
+        const scanned: Partial<AddExpenseForm> = {}
+        if (data.amount) scanned.amount = String(data.amount)
+        if (data.description) scanned.description = data.description
+        if (data.category && CATEGORIES.includes(data.category)) scanned.category = data.category
+        if (data.date) scanned.date = data.date
+        if (data.bucket === 'status' || data.bucket === 'utility') scanned.bucket = data.bucket
+        setForm(f => ({ ...f, ...scanned }))
+        setShowForm(true)
+        setScanning(false)
+      }
+      reader.readAsDataURL(file)
+    } catch {
+      setScanning(false)
+    }
+    // reset input so same file can be picked again
+    e.target.value = ''
+  }
+
   async function handleAdd() {
     if (!form.amount || !form.description || saving) return
     setSaving(true)
@@ -96,7 +141,7 @@ export default function ExpensesPage() {
       category: form.category,
       date: form.date,
       paid_by: form.paid_by,
-      split: form.split,
+      bucket: form.bucket,
       note: form.note.trim() || null,
     })
     await fetchExpenses()
@@ -110,7 +155,14 @@ export default function ExpensesPage() {
     setExpenses(prev => prev.filter(e => e.id !== id))
   }
 
-  const filtered = filterCat === 'all' ? expenses : expenses.filter(e => e.category === filterCat)
+  const filtered = expenses.filter(e => {
+    if (filterCat !== 'all' && e.category !== filterCat) return false
+    if (filterBucket !== 'all') {
+      const bucket = e.bucket || 'utility'
+      if (bucket !== filterBucket) return false
+    }
+    return true
+  })
   const grouped = groupByDate(filtered)
 
   if (loading) {
@@ -124,17 +176,57 @@ export default function ExpensesPage() {
 
   return (
     <div className="px-5 pt-2 pb-4">
-      {/* Header + add button */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-4 px-1">
         <h2 className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>expenses</h2>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={() => { setShowForm(true); setForm(defaultForm(user?.identity || 'yihan')) }}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-light"
-          style={{ backgroundColor: user?.color || '#534AB7' }}
-        >
-          +
-        </motion.button>
+        <div className="flex items-center gap-2">
+          {/* Scan receipt */}
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanFile} />
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => fileRef.current?.click()}
+            disabled={scanning}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: scanning ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.45)' }}
+            title="Scan receipt"
+          >
+            {scanning ? (
+              <motion.svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </motion.svg>
+            ) : (
+              <CameraIcon />
+            )}
+          </motion.button>
+          {/* Add manually */}
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => { setShowForm(true); setForm(defaultForm(user?.identity || 'yihan')) }}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-light"
+            style={{ backgroundColor: user?.color || '#534AB7' }}
+          >
+            +
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Bucket filter */}
+      <div className="flex gap-2 mb-3">
+        {(['all', 'utility', 'status'] as const).map(b => (
+          <motion.button
+            key={b}
+            whileTap={{ scale: 0.94 }}
+            onClick={() => setFilterBucket(b)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+            style={filterBucket === b
+              ? { backgroundColor: '#1A1A1A', color: '#fff' }
+              : { backgroundColor: '#FFFFFF', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.08)' }
+            }
+          >
+            {b === 'all' ? 'all' : b === 'utility' ? '🏠 for us' : '✨ status'}
+          </motion.button>
+        ))}
       </div>
 
       {/* Category filter pills */}
@@ -172,18 +264,11 @@ export default function ExpensesPage() {
                   <div
                     key={exp.id}
                     className="relative rounded-2xl p-4 overflow-hidden"
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                    }}
+                    style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
                   >
                     <ShineBorder shineColor={USER_COLORS[exp.paid_by]} duration={18} />
                     <div className="flex items-start gap-3">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-                        style={{ backgroundColor: CATEGORY_COLORS[exp.category] || '#94A3B8' }}
-                      />
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: CATEGORY_COLORS[exp.category] || '#94A3B8' }} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{exp.description}</p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -191,13 +276,13 @@ export default function ExpensesPage() {
                             {exp.category}
                           </span>
                           <span
-                            className="text-[9px] px-1.5 py-0.5 rounded-full text-white"
-                            style={{ backgroundColor: USER_COLORS[exp.paid_by] + 'CC' }}
+                            className="text-[9px] px-1.5 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: (exp.bucket === 'status') ? 'rgba(245,158,11,0.1)' : 'rgba(29,158,117,0.1)',
+                              color: (exp.bucket === 'status') ? '#D97706' : '#1D9E75',
+                            }}
                           >
-                            {exp.paid_by} paid
-                          </span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}>
-                            {exp.split === 'even' ? 'split' : `${exp.split} owes`}
+                            {(exp.bucket === 'status') ? '✨ status' : '🏠 for us'}
                           </span>
                         </div>
                         {exp.note && (
@@ -208,11 +293,7 @@ export default function ExpensesPage() {
                         <p className="text-base font-semibold" style={{ color: '#EF4444' }}>
                           −{formatCurrency(Number(exp.amount))}
                         </p>
-                        <button
-                          onClick={() => handleDelete(exp.id)}
-                          className="p-1 rounded-full"
-                          style={{ color: 'rgba(0,0,0,0.22)' }}
-                        >
+                        <button onClick={() => handleDelete(exp.id)} className="p-1 rounded-full" style={{ color: 'rgba(0,0,0,0.22)' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                           </svg>
@@ -233,16 +314,12 @@ export default function ExpensesPage() {
           <motion.div
             className="fixed inset-0 z-50 flex items-end justify-center"
             style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setShowForm(false)}
           >
             <motion.div
               className="bg-white rounded-t-3xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 320 }}
               onClick={e => e.stopPropagation()}
             >
@@ -260,8 +337,7 @@ export default function ExpensesPage() {
               <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                 <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
                 <input
-                  type="number"
-                  inputMode="decimal"
+                  type="number" inputMode="decimal"
                   value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
                   placeholder="0.00"
@@ -274,13 +350,31 @@ export default function ExpensesPage() {
               {/* Description */}
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>description</label>
               <input
-                type="text"
-                value={form.description}
+                type="text" value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="what was this for?"
                 className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
                 style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
               />
+
+              {/* Bucket — key question */}
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>was this for…</label>
+              <div className="flex gap-2 mb-4">
+                {([['utility', '🏠 for us', 'things that genuinely add to your life'], ['status', '✨ status', 'impressing others']] as [BucketType, string, string][]).map(([val, label, sub]) => (
+                  <button
+                    key={val}
+                    onClick={() => setForm(f => ({ ...f, bucket: val }))}
+                    className="flex-1 py-3 px-3 rounded-2xl text-left transition-all"
+                    style={form.bucket === val
+                      ? { backgroundColor: val === 'utility' ? 'rgba(29,158,117,0.12)' : 'rgba(245,158,11,0.12)', border: `1.5px solid ${val === 'utility' ? '#1D9E75' : '#D97706'}` }
+                      : { backgroundColor: 'rgba(0,0,0,0.03)', border: '1.5px solid transparent' }
+                    }
+                  >
+                    <p className="text-sm font-medium" style={{ color: form.bucket === val ? (val === 'utility' ? '#1D9E75' : '#D97706') : 'rgba(0,0,0,0.5)' }}>{label}</p>
+                    <p className="text-[9px] mt-0.5" style={{ color: 'rgba(0,0,0,0.35)' }}>{sub}</p>
+                  </button>
+                ))}
+              </div>
 
               {/* Category */}
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>category</label>
@@ -294,24 +388,21 @@ export default function ExpensesPage() {
                       ? { backgroundColor: CATEGORY_COLORS[cat], color: '#fff' }
                       : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.5)' }
                     }
-                  >
-                    {cat}
-                  </button>
+                  >{cat}</button>
                 ))}
               </div>
 
               {/* Date */}
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>date</label>
               <input
-                type="date"
-                value={form.date}
+                type="date" value={form.date}
                 onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                 className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
                 style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
               />
 
               {/* Paid by */}
-              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>paid by</label>
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>paid from</label>
               <div className="flex gap-2 mb-4">
                 {(['yihan', 'sun'] as UserIdentity[]).map(id => (
                   <button
@@ -328,29 +419,10 @@ export default function ExpensesPage() {
                 ))}
               </div>
 
-              {/* Split */}
-              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>split</label>
-              <div className="flex gap-2 mb-4">
-                {([['even', 'split evenly'], ['yihan', 'Yihan owes'], ['sun', 'Sun owes']] as [SplitType, string][]).map(([val, label]) => (
-                  <button
-                    key={val}
-                    onClick={() => setForm(f => ({ ...f, split: val }))}
-                    className="flex-1 py-2.5 rounded-2xl text-xs font-medium transition-all"
-                    style={form.split === val
-                      ? { backgroundColor: '#1A1A1A', color: '#fff' }
-                      : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
-                    }
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
               {/* Note */}
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>note (optional)</label>
               <input
-                type="text"
-                value={form.note}
+                type="text" value={form.note}
                 onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
                 placeholder="any extra details"
                 className="w-full px-4 py-3 rounded-2xl mb-6 outline-none text-sm"

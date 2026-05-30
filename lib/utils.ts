@@ -2,7 +2,10 @@ export function cn(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number, currency: 'USD' | 'KHR' = 'USD'): string {
+  if (currency === 'KHR') {
+    return '₭' + Math.round(Math.abs(amount)).toLocaleString('en-US')
+  }
   return '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 

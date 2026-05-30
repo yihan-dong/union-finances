@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-5',
+      model: 'claude-haiku-4-5',
       max_tokens: 256,
       messages: [
         {
@@ -39,8 +39,11 @@ Return this exact format:
   "description": "<merchant name or short description>",
   "category": "<one of: food & dining | rent & utilities | transport | shopping | health | entertainment | travel | subscriptions | other>",
   "date": "<YYYY-MM-DD, use today if not visible>",
-  "bucket": "<utility or status — utility means practical/essential for life, status means impressing others or luxury>"
+  "bucket": "<utility or status — utility means practical/essential for life, status means impressing others or luxury>",
+  "currency": "<USD or KHR>"
 }
+
+Currency rules: If the receipt shows Khmer Riel amounts (large numbers, ៛ symbol, KHR, or "Riel"), set "currency": "KHR" and return the raw KHR amount. Otherwise set "currency": "USD".
 
 Category rules: restaurant/cafe/food delivery → "food & dining"; grocery/supermarket → "food & dining"; electricity/water/wifi/rent → "rent & utilities"; grab/taxi/fuel/parking → "transport"; clothes/shoes/amazon → "shopping"; gym/pharmacy/hospital → "health"; cinema/event/bar → "entertainment"; flight/hotel/airbnb → "travel"; netflix/spotify/app subscription → "subscriptions"; otherwise → "other".
 

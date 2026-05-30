@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
-import type { Expense, ExpenseCategory, BucketType, UserIdentity } from '@/lib/types'
+import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -40,6 +40,7 @@ interface AddExpenseForm {
   date: string
   paid_by: UserIdentity
   bucket: BucketType
+  currency: CurrencyType
   note: string
 }
 
@@ -50,8 +51,20 @@ const defaultForm = (user: UserIdentity): AddExpenseForm => ({
   date: new Date().toISOString().slice(0, 10),
   paid_by: user,
   bucket: 'utility',
+  currency: 'USD',
   note: '',
 })
+
+interface ImportTx {
+  id: string
+  date: string
+  description: string
+  amount: number
+  currency: CurrencyType
+  type: 'debit' | 'credit'
+  category: ExpenseCategory
+  bucket: BucketType
+}
 
 function groupByDate(expenses: Expense[]): { date: string; items: Expense[] }[] {
   const map = new Map<string, Expense[]>()
@@ -71,6 +84,39 @@ function CameraIcon() {
   )
 }
 
+function DocumentIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  )
+}
+
+async function compressImage(file: File): Promise<{ base64: string; mimeType: 'image/jpeg' }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 900
+      const scale = img.width > MAX ? MAX / img.width : 1
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+      resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' })
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('failed')) }
+    img.src = url
+  })
+}
+
 export default function ExpensesPage() {
   const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -82,6 +128,13 @@ export default function ExpensesPage() {
   const [saving, setSaving] = useState(false)
   const [scanning, setScanning] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [showImport, setShowImport] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importItems, setImportItems] = useState<ImportTx[]>([])
+  const [importSelected, setImportSelected] = useState<Set<string>>(new Set())
+  const [importSaving, setImportSaving] = useState(false)
+  const pdfRef = useRef<HTMLInputElement>(null)
 
   const now = new Date()
   const month = now.getMonth() + 1
@@ -104,32 +157,85 @@ export default function ExpensesPage() {
     if (!file) return
     setScanning(true)
     try {
+      const { base64, mimeType } = await compressImage(file)
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ image: base64, mimeType }),
+      })
+      const data = await res.json()
+      const scanned: Partial<AddExpenseForm> = {}
+      if (data.amount) scanned.amount = String(data.amount)
+      if (data.description) scanned.description = data.description
+      if (data.category && CATEGORIES.includes(data.category)) scanned.category = data.category
+      if (data.date) scanned.date = data.date
+      if (data.bucket === 'status' || data.bucket === 'utility') scanned.bucket = data.bucket
+      if (data.currency === 'KHR') scanned.currency = 'KHR'
+      setForm(f => ({ ...f, ...scanned }))
+      setShowForm(true)
+    } catch {
+      // silent fail
+    } finally {
+      setScanning(false)
+    }
+    e.target.value = ''
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportLoading(true)
+    try {
       const reader = new FileReader()
       reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1]
-        const mimeType = file.type || 'image/jpeg'
-        const res = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ image: base64, mimeType }),
-        })
-        const data = await res.json()
-        const scanned: Partial<AddExpenseForm> = {}
-        if (data.amount) scanned.amount = String(data.amount)
-        if (data.description) scanned.description = data.description
-        if (data.category && CATEGORIES.includes(data.category)) scanned.category = data.category
-        if (data.date) scanned.date = data.date
-        if (data.bucket === 'status' || data.bucket === 'utility') scanned.bucket = data.bucket
-        setForm(f => ({ ...f, ...scanned }))
-        setShowForm(true)
-        setScanning(false)
+        try {
+          const base64 = (reader.result as string).split(',')[1]
+          const res = await fetch('/api/import', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ pdf: base64 }),
+          })
+          const data = await res.json()
+          const items: ImportTx[] = (data.transactions || []).map((t: Omit<ImportTx, 'id'>) => ({
+            ...t, id: crypto.randomUUID(),
+          }))
+          setImportItems(items)
+          setImportSelected(new Set(items.filter(t => t.type === 'debit').map(t => t.id)))
+          setShowImport(true)
+        } catch { /* silent */ }
+        setImportLoading(false)
       }
       reader.readAsDataURL(file)
     } catch {
-      setScanning(false)
+      setImportLoading(false)
     }
-    // reset input so same file can be picked again
     e.target.value = ''
+  }
+
+  async function confirmImport() {
+    if (importSaving) return
+    setImportSaving(true)
+    const selected = importItems.filter(t => importSelected.has(t.id))
+    const debits = selected.filter(t => t.type === 'debit')
+    const credits = selected.filter(t => t.type === 'credit')
+    if (debits.length > 0) {
+      await supabase.from('expenses').insert(debits.map(t => ({
+        amount: t.amount, description: t.description, category: t.category,
+        date: t.date, paid_by: user?.identity || 'yihan',
+        bucket: t.bucket, currency: t.currency, note: null,
+      })))
+    }
+    if (credits.length > 0) {
+      await supabase.from('income').insert(credits.map(t => ({
+        amount: t.amount, source: t.description, type: 'other',
+        date: t.date, owner: user?.identity || 'yihan', recurring: false,
+      })))
+    }
+    await fetchExpenses()
+    setShowImport(false)
+    setImportItems([])
+    setImportSelected(new Set())
+    setImportSaving(false)
   }
 
   async function handleAdd() {
@@ -142,6 +248,7 @@ export default function ExpensesPage() {
       date: form.date,
       paid_by: form.paid_by,
       bucket: form.bucket,
+      currency: form.currency,
       note: form.note.trim() || null,
     })
     await fetchExpenses()
@@ -196,6 +303,25 @@ export default function ExpensesPage() {
               </motion.svg>
             ) : (
               <CameraIcon />
+            )}
+          </motion.button>
+          {/* Import PDF */}
+          <input ref={pdfRef} type="file" accept="application/pdf" className="hidden" onChange={handleImportFile} />
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => pdfRef.current?.click()}
+            disabled={importLoading}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: importLoading ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.45)' }}
+            title="Import bank statement"
+          >
+            {importLoading ? (
+              <motion.svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </motion.svg>
+            ) : (
+              <DocumentIcon />
             )}
           </motion.button>
           {/* Add manually */}
@@ -290,7 +416,7 @@ export default function ExpensesPage() {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <p className="text-base font-semibold" style={{ color: '#EF4444' }}>
-                          −{formatCurrency(Number(exp.amount))}
+                          −{formatCurrency(Number(exp.amount), exp.currency || 'USD')}
                         </p>
                         <button onClick={() => handleDelete(exp.id)} className="p-1 rounded-full" style={{ color: 'rgba(0,0,0,0.22)' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -418,6 +544,24 @@ export default function ExpensesPage() {
                 ))}
               </div>
 
+              {/* Currency */}
+              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>currency</label>
+              <div className="flex gap-2 mb-4">
+                {(['USD', 'KHR'] as CurrencyType[]).map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setForm(f => ({ ...f, currency: c }))}
+                    className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
+                    style={form.currency === c
+                      ? { backgroundColor: '#1A1A1A', color: '#fff' }
+                      : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
+                    }
+                  >
+                    {c === 'USD' ? '$ USD' : '₭ KHR'}
+                  </button>
+                ))}
+              </div>
+
               {/* Note */}
               <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>note (optional)</label>
               <input
@@ -436,6 +580,101 @@ export default function ExpensesPage() {
               >
                 {saving ? 'saving…' : 'add expense'}
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Import Review Sheet */}
+      <AnimatePresence>
+        {showImport && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex items-end justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-t-3xl w-full max-w-md max-h-[88vh] flex flex-col"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0">
+                <div>
+                  <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>review import</h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'rgba(0,0,0,0.4)' }}>
+                    {importItems.filter(t => importSelected.has(t.id)).length} of {importItems.length} selected
+                  </p>
+                </div>
+                <button onClick={() => setShowImport(false)} style={{ color: 'rgba(0,0,0,0.32)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Transaction list */}
+              <div className="flex-1 overflow-y-auto px-6 pb-2 space-y-2">
+                {importItems.map(tx => {
+                  const selected = importSelected.has(tx.id)
+                  return (
+                    <button
+                      key={tx.id}
+                      onClick={() => setImportSelected(prev => {
+                        const next = new Set(prev)
+                        if (next.has(tx.id)) next.delete(tx.id)
+                        else next.add(tx.id)
+                        return next
+                      })}
+                      className="w-full flex items-center gap-3 p-3 rounded-2xl text-left transition-all"
+                      style={{
+                        backgroundColor: selected ? 'rgba(0,0,0,0.03)' : 'transparent',
+                        border: `1px solid ${selected ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.04)'}`,
+                        opacity: selected ? 1 : 0.45,
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <div
+                        className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+                        style={{ backgroundColor: selected ? (user?.color || '#534AB7') : 'rgba(0,0,0,0.08)' }}
+                      >
+                        {selected && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: '#1A1A1A' }}>{tx.description}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px]" style={{ color: 'rgba(0,0,0,0.35)' }}>{tx.date}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}>{tx.category}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{
+                            backgroundColor: tx.type === 'credit' ? 'rgba(29,158,117,0.1)' : 'rgba(239,68,68,0.08)',
+                            color: tx.type === 'credit' ? '#1D9E75' : '#EF4444',
+                          }}>{tx.type === 'credit' ? 'income' : 'expense'}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm font-semibold flex-shrink-0" style={{ color: tx.type === 'credit' ? '#1D9E75' : '#EF4444' }}>
+                        {tx.type === 'credit' ? '+' : '−'}{formatCurrency(tx.amount, tx.currency)}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Confirm button */}
+              <div className="px-6 pb-8 pt-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <button
+                  onClick={confirmImport}
+                  disabled={importSelected.size === 0 || importSaving}
+                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
+                  style={{ backgroundColor: user?.color || '#534AB7' }}
+                >
+                  {importSaving ? 'importing…' : `import ${importItems.filter(t => importSelected.has(t.id)).length} transactions`}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

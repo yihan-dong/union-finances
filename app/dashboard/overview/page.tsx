@@ -66,14 +66,18 @@ export default function OverviewPage() {
 
   // Calculations
   const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
-  const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0)
+  const usdExpenses = expenses.filter(e => !e.currency || e.currency === 'USD')
+  const khrExpenses = expenses.filter(e => e.currency === 'KHR')
+  const totalExpensesUSD = usdExpenses.reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpensesKHR = khrExpenses.reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpenses = totalExpensesUSD
   const saved = totalIncome - totalExpenses
   const savingsRate = totalIncome > 0 ? (saved / totalIncome) * 100 : 0
   const wealth = goals.reduce((s, g) => s + Number(g.current_amount), 0)
 
-  const utilitySpend = expenses.filter(e => e.bucket === 'utility' || !e.bucket).reduce((s, e) => s + Number(e.amount), 0)
-  const statusSpend = expenses.filter(e => e.bucket === 'status').reduce((s, e) => s + Number(e.amount), 0)
-  const statusPct = totalExpenses > 0 ? statusSpend / totalExpenses : 0
+  const utilitySpend = usdExpenses.filter(e => e.bucket === 'utility' || !e.bucket).reduce((s, e) => s + Number(e.amount), 0)
+  const statusSpend = usdExpenses.filter(e => e.bucket === 'status').reduce((s, e) => s + Number(e.amount), 0)
+  const statusPct = totalExpensesUSD > 0 ? statusSpend / totalExpensesUSD : 0
 
   const recentExpenses = expenses.slice(0, 5)
 
@@ -178,7 +182,10 @@ export default function OverviewPage() {
           <div style={{ width: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
           <div>
             <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.28)' }}>spent</p>
-            <p className="text-base font-semibold" style={{ color: '#EF4444' }}>−{formatCurrency(totalExpenses)}</p>
+            <p className="text-base font-semibold" style={{ color: '#EF4444' }}>−{formatCurrency(totalExpensesUSD)}</p>
+            {totalExpensesKHR > 0 && (
+              <p className="text-[10px] mt-0.5" style={{ color: 'rgba(239,68,68,0.7)' }}>+ ₭{Math.round(totalExpensesKHR).toLocaleString()} KHR</p>
+            )}
           </div>
         </div>
 
@@ -268,7 +275,7 @@ export default function OverviewPage() {
                   </p>
                 </div>
                 <p className="text-sm font-semibold flex-shrink-0" style={{ color: '#EF4444' }}>
-                  −{formatCurrency(Number(exp.amount))}
+                  −{formatCurrency(Number(exp.amount), exp.currency || 'USD')}
                 </p>
               </div>
             ))}

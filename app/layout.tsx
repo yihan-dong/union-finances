@@ -9,7 +9,15 @@ const instrumentSerif = Instrument_Serif({ variable: '--font-serif', subsets: ['
 export const metadata: Metadata = {
   title: 'union finances',
   description: 'Yihan + Sun — money together',
-  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'union finances' },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'union finances',
+    startupImage: '/apple-touch-icon.png',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
 }
 export const viewport: Viewport = {
   width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, themeColor: '#F7F6F3',

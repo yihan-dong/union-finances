@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ShineBorder } from '@/components/ui/shine-border'
 import type { Budget, Expense, ExpenseCategory } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
+import { CategoryIcon } from '@/components/icons'
 
 const CATEGORIES: ExpenseCategory[] = [
   'food & dining','rent & utilities','transport','shopping','health','entertainment','travel','subscriptions','other'
@@ -22,9 +24,17 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   'other':           '#94A3B8',
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.25 } }),
+const GLASS: React.CSSProperties = {
+  backgroundColor: 'rgba(255,255,255,0.82)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+  border: '1px solid rgba(255,255,255,0.65)',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+}
+
+const fade = {
+  hidden: { opacity: 0 },
+  visible: (i: number) => ({ opacity: 1, transition: { delay: i * 0.05, duration: 0.22 } }),
 }
 
 interface AddBudgetForm {
@@ -131,23 +141,11 @@ export default function BudgetPage() {
 
   return (
     <div className="px-5 pt-2 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-end mb-4 px-1">
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={() => { setShowForm(true); setEditingBudget(null); setForm({ category: 'food & dining', monthly_limit: '' }) }}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-lg font-light"
-          style={{ backgroundColor: user?.color || '#534AB7' }}
-        >
-          +
-        </motion.button>
-      </div>
-
       {/* Month selector */}
       <motion.div
-        custom={0} variants={fadeUp} initial="hidden" animate="visible"
+        custom={0} variants={fade} initial="hidden" animate="visible"
         className="flex items-center justify-between px-5 py-3 rounded-2xl mb-4"
-        style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}
+        style={GLASS}
       >
         <button onClick={prevMonth} style={{ color: 'rgba(0,0,0,0.35)' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -165,17 +163,22 @@ export default function BudgetPage() {
           const limit = Number(budget.monthly_limit)
           const pct = limit > 0 ? Math.min(spent / limit, 1) : 0
           const remaining = limit - spent
+          const catColor = CATEGORY_COLORS[budget.category]
 
           return (
             <motion.div
               key={budget.id}
-              custom={i + 1} variants={fadeUp} initial="hidden" animate="visible"
-              className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+              custom={i + 1} variants={fade} initial="hidden" animate="visible"
+              className="relative rounded-2xl p-4 overflow-hidden"
+              style={GLASS}
             >
+              <ShineBorder shineColor={catColor} duration={18} />
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[budget.category] }} />
+                  <div className="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center"
+                    style={{ backgroundColor: `${catColor}18`, color: catColor }}>
+                    <CategoryIcon category={budget.category} />
+                  </div>
                   <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{budget.category}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -214,13 +217,17 @@ export default function BudgetPage() {
         {/* Unbudgeted categories */}
         {unbudgetedCategories.map((cat, i) => {
           const spent = spendByCategory[cat] || 0
+          const catColor = CATEGORY_COLORS[cat]
           return (
-            <motion.div key={cat} custom={budgets.length + i + 1} variants={fadeUp} initial="hidden" animate="visible"
+            <motion.div key={cat} custom={budgets.length + i + 1} variants={fade} initial="hidden" animate="visible"
               className="rounded-2xl p-4"
-              style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.04)', opacity: 0.6 }}>
+              style={{ backgroundColor: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.5)', opacity: 0.6 }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat] + '66' }} />
+                  <div className="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center"
+                    style={{ backgroundColor: `${catColor}18`, color: catColor + '88' }}>
+                    <CategoryIcon category={cat} />
+                  </div>
                   <p className="text-sm" style={{ color: 'rgba(0,0,0,0.5)' }}>{cat}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -239,55 +246,69 @@ export default function BudgetPage() {
         })}
       </div>
 
+      {/* FAB */}
+      <motion.button
+        whileTap={{ scale: 0.88 }}
+        onClick={() => { setShowForm(true); setEditingBudget(null); setForm({ category: 'food & dining', monthly_limit: '' }) }}
+        className="fixed w-14 h-14 rounded-full flex items-center justify-center text-white text-3xl font-light z-40"
+        style={{ bottom: 108, right: 20, backgroundColor: user?.color || '#534AB7', boxShadow: `0 6px 22px ${(user?.color || '#534AB7')}55` }}
+      >+</motion.button>
+
       {/* Add/Edit Budget Sheet */}
       <AnimatePresence>
         {showForm && (
           <motion.div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => { setShowForm(false); setEditingBudget(null) }}>
-            <motion.div className="bg-white rounded-t-3xl p-6 w-full max-w-md max-h-[82vh] overflow-y-auto"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div className="bg-white rounded-t-3xl w-full max-w-md max-h-[82vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }} onClick={e => e.stopPropagation()}>
+              transition={{ type: 'tween', duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+              onClick={e => e.stopPropagation()}>
 
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
-                <button onClick={() => { setShowForm(false); setEditingBudget(null) }} style={{ color: 'rgba(0,0,0,0.32)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+              {/* Handle pill */}
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
+              </div>
+              <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ overscrollBehavior: 'contain' }}>
+                <div className="flex items-center justify-between mb-5 pt-2">
+                  <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
+                  <button onClick={() => { setShowForm(false); setEditingBudget(null) }} style={{ color: 'rgba(0,0,0,0.32)' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+
+                {!editingBudget && (
+                  <>
+                    <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>category</label>
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {CATEGORIES.map(cat => (
+                        <button key={cat} onClick={() => setForm(f => ({ ...f, category: cat }))}
+                          className="px-3 py-1.5 rounded-full text-xs transition-all"
+                          style={form.category === cat
+                            ? { backgroundColor: CATEGORY_COLORS[cat], color: '#fff' }
+                            : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.5)' }
+                          }>{cat}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>monthly limit</label>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-6" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
+                  <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
+                  <input type="number" inputMode="decimal" value={form.monthly_limit}
+                    onChange={e => setForm(f => ({ ...f, monthly_limit: e.target.value }))}
+                    placeholder="0.00"
+                    className="flex-1 text-2xl font-semibold bg-transparent outline-none" style={{ color: '#1A1A1A' }} autoFocus />
+                </div>
+
+                <button onClick={handleSave} disabled={!form.monthly_limit || saving}
+                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40 mb-2"
+                  style={{ backgroundColor: user?.color || '#534AB7' }}>
+                  {saving ? 'saving…' : editingBudget ? 'update' : 'set budget'}
                 </button>
               </div>
-
-              {!editingBudget && (
-                <>
-                  <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>category</label>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {CATEGORIES.map(cat => (
-                      <button key={cat} onClick={() => setForm(f => ({ ...f, category: cat }))}
-                        className="px-3 py-1.5 rounded-full text-xs transition-all"
-                        style={form.category === cat
-                          ? { backgroundColor: CATEGORY_COLORS[cat], color: '#fff' }
-                          : { backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.5)' }
-                        }>{cat}</button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>monthly limit</label>
-              <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-6" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
-                <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
-                <input type="number" inputMode="decimal" value={form.monthly_limit}
-                  onChange={e => setForm(f => ({ ...f, monthly_limit: e.target.value }))}
-                  placeholder="0.00"
-                  className="flex-1 text-2xl font-semibold bg-transparent outline-none" style={{ color: '#1A1A1A' }} autoFocus />
-              </div>
-
-              <button onClick={handleSave} disabled={!form.monthly_limit || saving}
-                className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
-                style={{ backgroundColor: user?.color || '#534AB7' }}>
-                {saving ? 'saving…' : editingBudget ? 'update' : 'set budget'}
-              </button>
             </motion.div>
           </motion.div>
         )}

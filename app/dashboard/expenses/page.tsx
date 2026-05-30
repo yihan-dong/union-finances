@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, PaidByType } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 
 const CATEGORIES: ExpenseCategory[] = [
   'food & dining','rent & utilities','transport','shopping','health','entertainment','travel','subscriptions','other'
@@ -29,28 +30,11 @@ const USER_COLORS: Record<string, string> = { yihan: '#534AB7', sun: '#1D9E75' }
 type FilterValue = 'all' | 'utility' | 'status' | ExpenseCategory
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 8 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.22 } }),
+  hidden: { opacity: 0 },
+  visible: (i: number) => ({ opacity: 1, transition: { delay: i * 0.05, duration: 0.22 } }),
 }
 
 // ── SVG Icons ──────────────────────────────────────────────
-function HouseIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-  )
-}
-
-function StarIcon({ size = 12 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  )
-}
-
 function CameraIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -78,15 +62,6 @@ function PriceCheckIcon({ size = 17 }: { size?: number }) {
       <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       <line x1="11" y1="8" x2="11" y2="14"/>
       <line x1="8" y1="11" x2="14" y2="11"/>
-    </svg>
-  )
-}
-
-function PencilIcon() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
     </svg>
   )
 }
@@ -414,7 +389,10 @@ export default function ExpensesPage() {
                     style={{ backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.6)', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
                     <ShineBorder shineColor={shineColor(exp.paid_by)} duration={18} />
                     <div className="flex items-start gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: CATEGORY_COLORS[exp.category] || '#94A3B8' }} />
+                      <div className="w-7 h-7 rounded-xl flex-shrink-0 flex items-center justify-center"
+                        style={{ backgroundColor: `${CATEGORY_COLORS[exp.category] || '#94A3B8'}18`, color: CATEGORY_COLORS[exp.category] || '#94A3B8' }}>
+                        <CategoryIcon category={exp.category} />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{exp.description}</p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">

@@ -74,10 +74,19 @@ function GoalsIcon({ active, color }: { active: boolean; color: string }) {
   )
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  '/dashboard/overview': 'overview',
+  '/dashboard/expenses': 'expenses',
+  '/dashboard/income':   'income',
+  '/dashboard/budget':   'budget',
+  '/dashboard/goals':    'savings',
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const pageTitle = PAGE_TITLES[pathname] ?? 'union finances'
 
   useEffect(() => {
     if (!loading && !user) router.replace('/')
@@ -96,8 +105,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="relative flex flex-col h-full" style={{ zIndex: 1 }}>
         {/* Top bar */}
         <header className="flex-shrink-0 flex items-center justify-between px-6 pt-12 pb-3">
-          <span className="text-lg" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>
-            union finances
+          <span className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
+            {pageTitle}
           </span>
           <div className="flex items-center gap-2.5">
             <div

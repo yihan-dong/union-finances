@@ -135,20 +135,13 @@ export default function OverviewPage() {
   return (
     <div className="px-5 pt-2 pb-4 space-y-3">
 
-      {/* Month header */}
-      <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
-        <h2 className="text-2xl px-1" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>
-          {monthNames[month - 1]} {year}
-        </h2>
-      </motion.div>
-
       {/* Household health card */}
       <motion.div
-        custom={1} variants={fadeUp} initial="hidden" animate="visible"
+        custom={0} variants={fadeUp} initial="hidden" animate="visible"
         className="rounded-3xl p-5"
         style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
       >
-        <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: 'rgba(0,0,0,0.3)' }}>household</p>
+        <p className="text-[10px] uppercase tracking-widest mb-4" style={{ color: 'rgba(0,0,0,0.3)' }}>{monthNames[month - 1]} {year}</p>
 
         {/* Big saved number */}
         <div className="mb-4">
@@ -207,7 +200,7 @@ export default function OverviewPage() {
       {/* Wealth card */}
       {wealth > 0 && (
         <motion.div
-          custom={2} variants={fadeUp} initial="hidden" animate="visible"
+          custom={1} variants={fadeUp} initial="hidden" animate="visible"
           className="rounded-3xl p-5"
           style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
         >

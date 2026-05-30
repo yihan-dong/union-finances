@@ -113,10 +113,7 @@ export default function GoalsPage() {
   return (
     <div className="px-5 pt-2 pb-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div>
-          <h2 className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: 'rgba(0,0,0,0.22)' }}>savings</h2>
-        </div>
+      <div className="flex items-center justify-end mb-4 px-1">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={() => setShowForm(true)}

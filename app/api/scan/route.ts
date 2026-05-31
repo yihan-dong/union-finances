@@ -9,13 +9,22 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10)
 
+  const isPdf = mimeType === 'application/pdf'
+
+  const mediaBlock = isPdf
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: image } }
+    : { type: 'image', source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: image } }
+
+  const requestHeaders: Record<string, string> = {
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+    'content-type': 'application/json',
+  }
+  if (isPdf) requestHeaders['anthropic-beta'] = 'pdfs-2024-09-25'
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
+    headers: requestHeaders,
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
       max_tokens: 256,
@@ -23,10 +32,7 @@ export async function POST(req: NextRequest) {
         {
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: image },
-            },
+            mediaBlock,
             {
               type: 'text',
               text: `You are reading a receipt or invoice. Extract the key details and return ONLY valid JSON — no markdown, no explanation.

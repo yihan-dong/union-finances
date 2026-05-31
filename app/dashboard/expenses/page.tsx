@@ -7,6 +7,7 @@ import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, PaidByType } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
+import LoadingOverlay from '@/components/LoadingOverlay'
 
 const CATEGORIES: ExpenseCategory[] = [
   'food & dining','rent & utilities','transport','shopping','health','entertainment','travel','subscriptions','other'
@@ -24,7 +25,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   'other':           '#94A3B8',
 }
 
-const USER_COLORS: Record<string, string> = { yihan: '#534AB7', sun: '#1D9E75' }
+const USER_COLORS: Record<string, string> = { yihan: '#534AB7', sun: '#1D9E75', sokim: '#EAB308', sambath: '#DB2777' }
 
 // Combined filter: 'all' | bucket | category
 type FilterValue = 'all' | 'utility' | 'status' | ExpenseCategory
@@ -145,7 +146,7 @@ const VERDICT_STYLE: Record<string, { bg: string; color: string; label: string }
 
 // ── Main Component ─────────────────────────────────────────
 export default function ExpensesPage() {
-  const { user } = useAuth()
+  const { user, resolveProfile } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<FilterValue>('all')
@@ -177,6 +178,16 @@ export default function ExpensesPage() {
   const [showPriceResult, setShowPriceResult] = useState(false)
   const priceRef = useRef<HTMLInputElement>(null)
 
+  // Loading overlay context
+  type LoadCtx = 'scan' | 'import' | 'price-check' | 'save' | 'generic'
+  const loadingCtx: LoadCtx =
+    scanning ? 'scan' :
+    importLoading ? 'import' :
+    priceChecking ? 'price-check' :
+    saving ? 'save' :
+    'generic'
+  const anyLoading = scanning || importLoading || priceChecking || saving
+
   const now = new Date()
   const month = now.getMonth() + 1
   const year  = now.getFullYear()
@@ -185,6 +196,7 @@ export default function ExpensesPage() {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`
     const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
     const { data } = await supabase.from('expenses').select('*')
+      .eq('couple', user?.couple ?? 'union')
       .gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
     setExpenses((data as Expense[]) || [])
     setLoading(false)
@@ -214,8 +226,21 @@ export default function ExpensesPage() {
     const file = e.target.files?.[0]; if (!file) return
     setScanning(true)
     try {
-      const { base64, mimeType } = await compressImage(file)
-      const res  = await fetch('/api/scan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: base64, mimeType }) })
+      let base64: string
+      let mimeType: string
+      if (file.type === 'application/pdf') {
+        const buffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(buffer)
+        let binary = ''
+        bytes.forEach(b => binary += String.fromCharCode(b))
+        base64 = btoa(binary)
+        mimeType = 'application/pdf'
+      } else {
+        const compressed = await compressImage(file)
+        base64 = compressed.base64
+        mimeType = compressed.mimeType
+      }
+      const res = await fetch('/api/scan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: base64, mimeType }) })
       const data = await res.json()
       const scanned: Partial<ExpenseForm> = {}
       if (data.amount)    scanned.amount      = String(data.amount)
@@ -281,12 +306,14 @@ export default function ExpensesPage() {
       await supabase.from('expenses').insert(debits.map(t => ({
         amount: t.amount, description: t.description, category: t.category,
         date: t.date, paid_by: user?.identity || 'yihan', bucket: t.bucket, currency: t.currency, note: null,
+        couple: user?.couple ?? 'union',
       })))
     }
     if (credits.length > 0) {
       await supabase.from('income').insert(credits.map(t => ({
         amount: t.amount, source: t.description, type: 'other',
         date: t.date, owner: user?.identity || 'yihan', recurring: false,
+        couple: user?.couple ?? 'union',
       })))
     }
     await fetchExpenses()
@@ -314,6 +341,7 @@ export default function ExpensesPage() {
         bucket: form.bucket,
         currency: form.currency,
         note: form.note.trim() || null,
+        couple: user?.couple ?? 'union',
       }
       if (formMode === 'edit' && editingId) {
         const { error } = await supabase.from('expenses').update(payload).eq('id', editingId)
@@ -359,8 +387,11 @@ export default function ExpensesPage() {
 
   return (
     <div className="px-5 pt-2 pb-4">
+      {/* Loading overlay */}
+      <LoadingOverlay visible={anyLoading} context={loadingCtx} />
+
       {/* Hidden inputs */}
-      <input ref={fileRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanFile} />
+      <input ref={fileRef}  type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanFile} />
       <input ref={pdfRef}   type="file" accept="application/pdf"               className="hidden" onChange={handleImportFile} />
       <input ref={priceRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePriceFile} />
 
@@ -503,7 +534,7 @@ export default function ExpensesPage() {
       <AnimatePresence>
         {showForm && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
-            style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)', touchAction: 'none' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto max-h-[86vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -588,21 +619,25 @@ export default function ExpensesPage() {
                 {/* Paid by */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>paid from</label>
                 <div className="flex gap-2 mb-4">
-                  {(['yihan', 'both', 'sun'] as PaidByType[]).map(id => (
-                    <button key={id} onClick={() => setForm(f => ({ ...f, paid_by: id }))}
-                      className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
-                      style={form.paid_by === id
-                        ? {
-                            background: id === 'both'
-                              ? `linear-gradient(135deg, ${USER_COLORS.yihan}, ${USER_COLORS.sun})`
-                              : USER_COLORS[id],
-                            color: '#fff',
-                          }
-                        : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
-                      }>
-                      {id === 'yihan' ? 'Yihan' : id === 'sun' ? 'Sun' : 'Both'}
-                    </button>
-                  ))}
+                  {(() => {
+                    const members = user?.coupleMembers ?? ['yihan', 'sun']
+                    const paidByOptions: PaidByType[] = [members[0], 'both', members[1]]
+                    return paidByOptions.map(id => (
+                      <button key={id} onClick={() => setForm(f => ({ ...f, paid_by: id }))}
+                        className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
+                        style={form.paid_by === id
+                          ? {
+                              background: id === 'both'
+                                ? `linear-gradient(135deg, ${USER_COLORS[members[0]]}, ${USER_COLORS[members[1]]})`
+                                : USER_COLORS[id],
+                              color: '#fff',
+                            }
+                          : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
+                        }>
+                        {id === 'both' ? 'Both' : resolveProfile(id as UserIdentity).name}
+                      </button>
+                    ))
+                  })()}
                 </div>
 
                 {/* Currency */}
@@ -649,7 +684,7 @@ export default function ExpensesPage() {
       <AnimatePresence>
         {showPriceResult && priceResult && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
-            style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.4)', touchAction: 'none' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -710,7 +745,7 @@ export default function ExpensesPage() {
       <AnimatePresence>
         {showImport && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
-            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.45)', touchAction: 'none' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto max-h-[88vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}

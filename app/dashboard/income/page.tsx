@@ -13,6 +13,8 @@ const INCOME_TYPES: IncomeType[] = ['salary', 'freelance', 'investment', 'gift',
 const USER_COLORS: Record<string, string> = {
   yihan: '#534AB7',
   sun: '#1D9E75',
+  sokim: '#EAB308',
+  sambath: '#DB2777',
 }
 
 const TYPE_COLORS: Record<IncomeType, string> = {
@@ -65,7 +67,7 @@ function LightbulbIcon() {
 }
 
 export default function IncomePage() {
-  const { user } = useAuth()
+  const { user, resolveProfile } = useAuth()
   const [incomes, setIncomes] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -81,6 +83,7 @@ export default function IncomePage() {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`
     const endDate = `${year}-${String(month).padStart(2,'0')}-31`
     const { data } = await supabase.from('income').select('*')
+      .eq('couple', user?.couple ?? 'union')
       .gte('date', startDate).lte('date', endDate)
       .order('date', { ascending: false })
     setIncomes((data as Income[]) || [])
@@ -100,6 +103,7 @@ export default function IncomePage() {
       date: form.date,
       owner: form.owner,
       recurring: form.recurring,
+      couple: user?.couple ?? 'union',
     })
     await fetchIncome()
     setForm(defaultForm(user?.identity || 'yihan'))
@@ -114,9 +118,10 @@ export default function IncomePage() {
     setIncomes(prev => prev.filter(i => i.id !== id))
   }
 
-  const yihanTotal = incomes.filter(i => i.owner === 'yihan').reduce((s, i) => s + Number(i.amount), 0)
-  const sunTotal = incomes.filter(i => i.owner === 'sun').reduce((s, i) => s + Number(i.amount), 0)
-  const combined = yihanTotal + sunTotal
+  const members = user?.coupleMembers ?? (['yihan', 'sun'] as UserIdentity[])
+  const member0Total = incomes.filter(i => i.owner === members[0]).reduce((s, i) => s + Number(i.amount), 0)
+  const member1Total = incomes.filter(i => i.owner === members[1]).reduce((s, i) => s + Number(i.amount), 0)
+  const combined = member0Total + member1Total
 
   if (loading) {
     return (
@@ -163,14 +168,14 @@ export default function IncomePage() {
         <p className="text-3xl font-semibold mb-3" style={{ color: '#1D9E75' }}>{formatCurrency(combined)}</p>
         <div className="flex gap-4">
           <div>
-            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: '#534AB7' }} />
-            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(yihanTotal)}</p>
-            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>Yihan</p>
+            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: USER_COLORS[members[0]] }} />
+            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(member0Total)}</p>
+            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>{resolveProfile(members[0]).name}</p>
           </div>
           <div>
-            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: '#1D9E75' }} />
-            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(sunTotal)}</p>
-            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>Sun</p>
+            <div className="w-2 h-2 rounded-full mb-1" style={{ backgroundColor: USER_COLORS[members[1]] }} />
+            <p className="text-xs font-medium" style={{ color: '#1A1A1A' }}>{formatCurrency(member1Total)}</p>
+            <p className="text-[10px]" style={{ color: 'rgba(0,0,0,0.3)' }}>{resolveProfile(members[1]).name}</p>
           </div>
           {combined > 0 && (
             <div className="ml-auto text-right">
@@ -247,7 +252,7 @@ export default function IncomePage() {
         {showForm && (
           <motion.div
             className="fixed inset-0 z-[200] flex items-end justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.35)', touchAction: 'none' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
             <motion.div
@@ -322,7 +327,7 @@ export default function IncomePage() {
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>whose income</label>
                 <div className="flex gap-2 mb-4">
-                  {(['yihan', 'sun'] as UserIdentity[]).map(id => (
+                  {(user?.coupleMembers ?? ['yihan', 'sun'] as UserIdentity[]).map(id => (
                     <button key={id}
                       onClick={() => setForm(f => ({ ...f, owner: id }))}
                       className="flex-1 py-2.5 rounded-2xl text-sm font-medium transition-all"
@@ -330,7 +335,7 @@ export default function IncomePage() {
                         ? { backgroundColor: USER_COLORS[id], color: '#fff' }
                         : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
                       }
-                    >{id === 'yihan' ? 'Yihan' : 'Sun'}</button>
+                    >{resolveProfile(id).name}</button>
                   ))}
                 </div>
 

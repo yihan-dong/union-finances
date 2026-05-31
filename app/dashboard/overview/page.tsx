@@ -107,8 +107,8 @@ export default function OverviewPage() {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`
     const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
     const [{ data: expData }, { data: incData }, { data: goalData }] = await Promise.all([
-      supabase.from('expenses').select('*').gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
-      supabase.from('income').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('expenses').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
+      supabase.from('income').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),
       supabase.from('goals').select('*'),
     ])
     setExpenses((expData as Expense[]) || [])

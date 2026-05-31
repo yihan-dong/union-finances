@@ -63,8 +63,8 @@ export default function BudgetPage() {
     const endDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
 
     const [{ data: bData }, { data: eData }] = await Promise.all([
-      supabase.from('budgets').select('*').eq('month', viewMonth).eq('year', viewYear),
-      supabase.from('expenses').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('budgets').select('*').eq('couple', user?.couple ?? 'union').eq('month', viewMonth).eq('year', viewYear),
+      supabase.from('expenses').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),
     ])
 
     setBudgets((bData as Budget[]) || [])
@@ -96,6 +96,7 @@ export default function BudgetPage() {
     } else {
       const { data: existing } = await supabase.from('budgets').select('id')
         .eq('category', form.category).eq('owner', 'shared')
+        .eq('couple', user?.couple ?? 'union')
         .eq('month', viewMonth).eq('year', viewYear).single()
       if (existing) {
         await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', existing.id)
@@ -106,6 +107,7 @@ export default function BudgetPage() {
           owner: 'shared',
           month: viewMonth,
           year: viewYear,
+          couple: user?.couple ?? 'union',
         })
       }
     }
@@ -257,7 +259,8 @@ export default function BudgetPage() {
       {/* Add/Edit Budget Sheet */}
       <AnimatePresence>
         {showForm && (
-          <motion.div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
+          <motion.div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)', touchAction: 'none' }}
+            onTouchMove={(e: React.TouchEvent) => e.stopPropagation()}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="bg-white rounded-t-3xl w-full max-w-md max-h-[82vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
@@ -268,7 +271,7 @@ export default function BudgetPage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ overscrollBehavior: 'contain' }}>
+              <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
                   <button onClick={() => { setShowForm(false); setEditingBudget(null) }} style={{ color: 'rgba(0,0,0,0.32)' }}>

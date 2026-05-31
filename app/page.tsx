@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { UserIdentity } from '@/lib/types'
 
 const IDENTITIES: { identity: UserIdentity; email: string }[] = [
-  { identity: 'yihan', email: 'yihan@union.app' },
-  { identity: 'sun',   email: 'sun@union.app'   },
+  { identity: 'yihan',   email: 'yihan@union.app'   },
+  { identity: 'sun',     email: 'sun@union.app'     },
+  { identity: 'sokim',   email: 'sokim@union.app'   },
+  { identity: 'sambath', email: 'sambath@union.app' },
 ]
 
 const PAD = ['1','2','3','4','5','6','7','8','9','','0','⌫']
@@ -254,38 +256,42 @@ export default function LoginPage() {
                   {IDENTITIES.map(({ identity }, i) => {
                     const profile = resolveProfile(identity)
                     return (
-                      <motion.button
-                        key={identity}
-                        onClick={() => { setSelectedIdentity(identity); setPin(''); goTo('pin', 1) }}
-                        className="relative w-full flex items-center gap-4 p-5 rounded-2xl text-left active:scale-[0.99]"
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid rgba(0,0,0,0.07)',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                        }}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.07, duration: 0.35 }}
-                        whileHover={{ boxShadow: '0 3px 12px rgba(0,0,0,0.09)' }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div
-                          className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
-                          style={{ backgroundColor: profile.color }}
+                      <div key={identity}>
+                        {i === 2 && (
+                          <div className="my-1 h-px" style={{ backgroundColor: 'rgba(0,0,0,0.07)' }} />
+                        )}
+                        <motion.button
+                          onClick={() => { setSelectedIdentity(identity); setPin(''); goTo('pin', 1) }}
+                          className="relative w-full flex items-center gap-4 p-5 rounded-2xl text-left active:scale-[0.99]"
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid rgba(0,0,0,0.07)',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                          }}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 + i * 0.07, duration: 0.35 }}
+                          whileHover={{ boxShadow: '0 3px 12px rgba(0,0,0,0.09)' }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          {profile.avatar_url ? (
-                            <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
-                          ) : (
-                            profile.initials
-                          )}
-                        </div>
-                        <span className="text-xl flex-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                          {profile.name}
-                        </span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                      </motion.button>
+                          <div
+                            className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
+                            style={{ backgroundColor: profile.color }}
+                          >
+                            {profile.avatar_url ? (
+                              <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                            ) : (
+                              profile.initials
+                            )}
+                          </div>
+                          <span className="text-xl flex-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
+                            {profile.name}
+                          </span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                            <polyline points="9 18 15 12 9 6"/>
+                          </svg>
+                        </motion.button>
+                      </div>
                     )
                   })}
                 </div>

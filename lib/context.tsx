@@ -1,9 +1,10 @@
 'use client'
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { UserIdentity } from '@/lib/types'
+import { UserIdentity, CoupleId } from '@/lib/types'
 
 export type { UserIdentity }
+export type { CoupleId }
 
 export interface AuthUser {
   id: string
@@ -13,6 +14,8 @@ export interface AuthUser {
   initials: string
   color: string
   avatar_url?: string | null
+  couple: CoupleId
+  coupleMembers: [UserIdentity, UserIdentity]
 }
 
 export interface ProfileOverride {
@@ -34,8 +37,19 @@ interface AuthContextType {
 }
 
 const BASE_PROFILES: Record<UserIdentity, { identity: UserIdentity; name: string; initials: string; color: string }> = {
-  yihan: { identity: 'yihan', name: 'Yihan', initials: 'YD', color: '#534AB7' },
-  sun:   { identity: 'sun',   name: 'Sun',   initials: 'SR', color: '#1D9E75' },
+  yihan:   { identity: 'yihan',   name: 'Yihan',   initials: 'YD', color: '#534AB7' },
+  sun:     { identity: 'sun',     name: 'Sun',     initials: 'SR', color: '#1D9E75' },
+  sokim:   { identity: 'sokim',   name: 'Sokim',   initials: 'SK', color: '#EAB308' },
+  sambath: { identity: 'sambath', name: 'Sambath', initials: 'SB', color: '#DB2777' },
+}
+
+const COUPLE_MAP: Record<UserIdentity, CoupleId> = {
+  yihan: 'union', sun: 'union', sokim: 'sokimbath', sambath: 'sokimbath',
+}
+
+const COUPLE_MEMBERS: Record<CoupleId, [UserIdentity, UserIdentity]> = {
+  union: ['yihan', 'sun'],
+  sokimbath: ['sokim', 'sambath'],
 }
 
 function applyOverride(
@@ -67,8 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [overrides, setOverrides] = useState<Record<UserIdentity, ProfileOverride>>({
-    yihan: { identity: 'yihan' },
-    sun:   { identity: 'sun' },
+    yihan:   { identity: 'yihan' },
+    sun:     { identity: 'sun' },
+    sokim:   { identity: 'sokim' },
+    sambath: { identity: 'sambath' },
   })
 
   const loadOverrides = useCallback(async () => {
@@ -77,11 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return
       if (data) {
         const next: Record<UserIdentity, ProfileOverride> = {
-          yihan: { identity: 'yihan' },
-          sun:   { identity: 'sun' },
+          yihan:   { identity: 'yihan' },
+          sun:     { identity: 'sun' },
+          sokim:   { identity: 'sokim' },
+          sambath: { identity: 'sambath' },
         }
         for (const row of data as ProfileOverride[]) {
-          if (row.identity === 'yihan' || row.identity === 'sun') next[row.identity] = row
+          if (row.identity === 'yihan' || row.identity === 'sun' || row.identity === 'sokim' || row.identity === 'sambath') {
+            next[row.identity] = row
+          }
         }
         setOverrides(next)
       }
@@ -95,14 +115,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(prev => {
       if (!prev) return prev
       const merged = applyOverride(BASE_PROFILES[prev.identity], overrides[prev.identity])
-      return { ...prev, ...merged }
+      const couple = COUPLE_MAP[prev.identity]
+      const coupleMembers = COUPLE_MEMBERS[couple]
+      return { ...prev, ...merged, couple, coupleMembers }
     })
   }, [overrides])
 
   useEffect(() => {
     if (DEV_USER && BASE_PROFILES[DEV_USER]) {
       const merged = applyOverride(BASE_PROFILES[DEV_USER], overrides[DEV_USER])
-      setUser({ id: 'dev', email: `${DEV_USER}@union.app`, ...merged })
+      const couple = COUPLE_MAP[DEV_USER]
+      const coupleMembers = COUPLE_MEMBERS[couple]
+      setUser({ id: 'dev', email: `${DEV_USER}@union.app`, ...merged, couple, coupleMembers })
       setLoading(false)
       return
     }
@@ -110,7 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
         const profile = profileFromEmail(session.user.email, overrides)
-        if (profile) setUser({ id: session.user.id, email: session.user.email, ...profile })
+        if (profile) {
+          const couple = COUPLE_MAP[profile.identity]
+          const coupleMembers = COUPLE_MEMBERS[couple]
+          setUser({ id: session.user.id, email: session.user.email, ...profile, couple, coupleMembers })
+        }
       }
       setLoading(false)
     })
@@ -118,8 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.email) {
         const profile = profileFromEmail(session.user.email, overrides)
-        if (profile) setUser({ id: session.user.id, email: session.user.email, ...profile })
-        else setUser(null)
+        if (profile) {
+          const couple = COUPLE_MAP[profile.identity]
+          const coupleMembers = COUPLE_MEMBERS[couple]
+          setUser({ id: session.user.id, email: session.user.email, ...profile, couple, coupleMembers })
+        } else {
+          setUser(null)
+        }
       } else {
         setUser(null)
       }

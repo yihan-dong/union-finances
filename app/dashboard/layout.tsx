@@ -7,11 +7,11 @@ import { useAuth } from '@/lib/context'
 import TreeBackground from '@/components/TreeBackground'
 
 const TABS = [
-  { href: '/dashboard/overview', label: 'overview', Icon: OverviewIcon },
-  { href: '/dashboard/expenses', label: 'expenses', Icon: ExpensesIcon },
-  { href: '/dashboard/income', label: 'income', Icon: IncomeIcon },
-  { href: '/dashboard/budget', label: 'budget', Icon: BudgetIcon },
-  { href: '/dashboard/goals', label: 'goals', Icon: GoalsIcon },
+  { href: '/dashboard/overview',   label: 'overview',   Icon: OverviewIcon   },
+  { href: '/dashboard/expenses',   label: 'expenses',   Icon: ExpensesIcon   },
+  { href: '/dashboard/income',     label: 'income',     Icon: IncomeIcon     },
+  { href: '/dashboard/budget',     label: 'budget',     Icon: BudgetIcon     },
+  { href: '/dashboard/assistant',  label: 'assistant',  Icon: AssistantIcon  },
 ]
 
 function OverviewIcon({ active, color }: { active: boolean; color: string }) {
@@ -64,23 +64,22 @@ function BudgetIcon({ active, color }: { active: boolean; color: string }) {
   )
 }
 
-function GoalsIcon({ active, color }: { active: boolean; color: string }) {
+function AssistantIcon({ active, color }: { active: boolean; color: string }) {
   const c = active ? color : 'rgba(0,0,0,0.28)'
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <circle cx="12" cy="12" r="6"/>
-      <circle cx="12" cy="12" r="2"/>
+      <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
+      <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/>
     </svg>
   )
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard/overview': 'overview',
-  '/dashboard/expenses': 'expenses',
-  '/dashboard/income':   'income',
-  '/dashboard/budget':   'budget',
-  '/dashboard/goals':    'savings',
+  '/dashboard/overview':  'overview',
+  '/dashboard/expenses':  'expenses',
+  '/dashboard/income':    'income',
+  '/dashboard/budget':    'budget',
+  '/dashboard/assistant': 'assistant',
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -102,11 +101,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="h-screen flex flex-col max-w-md mx-auto relative overflow-hidden" style={{ backgroundColor: '#F7F6F3' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#F7F6F3' }}>
       <TreeBackground />
-      <div className="relative flex flex-col h-full" style={{ zIndex: 1 }}>
-        {/* Top bar */}
-        <header className="flex-shrink-0 flex items-center justify-between px-6 pt-12 pb-3">
+      <div className="max-w-md mx-auto relative" style={{ zIndex: 1 }}>
+        {/* Header — flows naturally with content */}
+        <header className="flex items-center justify-between px-6 pt-12 pb-3">
           <span className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
             {pageTitle}
           </span>
@@ -121,63 +120,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 user.initials
               )}
             </div>
-            <button
-              onClick={signOut}
-              className="text-[11px] transition-colors"
-              style={{ color: 'rgba(0,0,0,0.22)' }}
-            >
+            <button onClick={signOut} className="text-[11px] transition-colors" style={{ color: 'rgba(0,0,0,0.22)' }}>
               out
             </button>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto pb-32">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.14 }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-
-        {/* Bottom nav pill */}
-        <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8" style={{ zIndex: 50 }}>
-          <div
-            className="flex items-center rounded-2xl p-1.5"
-            style={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid rgba(0,0,0,0.07)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            }}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.14 }}
           >
-            {TABS.map(({ href, label, Icon }) => {
-              const isActive = pathname.startsWith(href)
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all duration-200"
-                  style={isActive ? { backgroundColor: 'rgba(0,0,0,0.04)' } : {}}
-                >
-                  <Icon active={isActive} color={user.color} />
-                  <span
-                    className="text-[9px] font-medium tracking-wide"
-                    style={{ color: isActive ? user.color : 'rgba(0,0,0,0.28)' }}
-                  >
-                    {label}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-        </nav>
+            {children}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Spacer for fixed nav */}
+        <div className="h-32" />
       </div>
+
+      {/* Fixed bottom nav */}
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8" style={{ zIndex: 50 }}>
+        <div
+          className="flex items-center rounded-2xl p-1.5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid rgba(0,0,0,0.07)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          }}
+        >
+          {TABS.map(({ href, label, Icon }) => {
+            const isActive = pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-all duration-200"
+                style={isActive ? { backgroundColor: 'rgba(0,0,0,0.04)' } : {}}
+              >
+                <Icon active={isActive} color={user.color} />
+                <span className="text-[9px] font-medium tracking-wide" style={{ color: isActive ? user.color : 'rgba(0,0,0,0.28)' }}>
+                  {label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }

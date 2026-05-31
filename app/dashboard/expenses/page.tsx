@@ -156,6 +156,8 @@ export default function ExpensesPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<ExpenseForm>(defaultForm(user?.identity || 'yihan'))
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState('')
 
   // Scan
   const [scanning, setScanning] = useState(false)
@@ -192,12 +194,14 @@ export default function ExpensesPage() {
 
   function openAdd() {
     setFormMode('add'); setEditingId(null)
+    setSaveError(''); setSaveSuccess('')
     setForm(defaultForm(user?.identity || 'yihan'))
     setShowForm(true)
   }
 
   function openEdit(exp: Expense) {
     setFormMode('edit'); setEditingId(exp.id)
+    setSaveError(''); setSaveSuccess('')
     setForm({
       amount: String(exp.amount), description: exp.description, category: exp.category,
       date: exp.date, paid_by: exp.paid_by, bucket: exp.bucket || 'utility',
@@ -221,6 +225,7 @@ export default function ExpensesPage() {
       if (data.bucket === 'status' || data.bucket === 'utility') scanned.bucket = data.bucket
       if (data.currency === 'KHR') scanned.currency = 'KHR'
       setFormMode('add'); setEditingId(null)
+      setSaveError('')
       setForm(f => ({ ...f, ...scanned }))
       setShowForm(true)
     } catch { /* silent */ }
@@ -291,17 +296,42 @@ export default function ExpensesPage() {
   async function handleSave() {
     if (!form.amount || !form.description || saving) return
     setSaving(true)
-    const payload = {
-      amount: parseFloat(form.amount), description: form.description.trim(),
-      category: form.category, date: form.date, paid_by: form.paid_by,
-      bucket: form.bucket, currency: form.currency, note: form.note.trim() || null,
+    setSaveError('')
+    setSaveSuccess('')
+    const amount = parseFloat(form.amount)
+    if (isNaN(amount) || amount <= 0) {
+      setSaveError('please enter a valid amount')
+      setSaving(false)
+      return
     }
-    if (formMode === 'edit' && editingId) {
-      await supabase.from('expenses').update(payload).eq('id', editingId)
-    } else {
-      await supabase.from('expenses').insert(payload)
+    try {
+      const payload = {
+        amount,
+        description: form.description.trim(),
+        category: form.category,
+        date: form.date,
+        paid_by: form.paid_by,
+        bucket: form.bucket,
+        currency: form.currency,
+        note: form.note.trim() || null,
+      }
+      if (formMode === 'edit' && editingId) {
+        const { error } = await supabase.from('expenses').update(payload).eq('id', editingId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('expenses').insert(payload)
+        if (error) throw error
+      }
+      // Refetch — also widen range temporarily to catch cross-month dates
+      await fetchExpenses()
+      setShowForm(false)
+      setSaveSuccess('')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'save failed'
+      setSaveError(`couldn't save — ${msg}`)
+    } finally {
+      setSaving(false)
     }
-    await fetchExpenses(); setShowForm(false); setSaving(false)
   }
 
   async function handleDelete(id: string) {
@@ -596,6 +626,13 @@ export default function ExpensesPage() {
                   placeholder="any extra details"
                   className="w-full px-4 py-3 rounded-2xl mb-6 outline-none text-sm"
                   style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }} />
+
+                {/* Error feedback */}
+                {saveError && (
+                  <div className="mb-3 px-4 py-3 rounded-2xl text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}>
+                    {saveError}
+                  </div>
+                )}
 
                 <button onClick={handleSave} disabled={!form.amount || !form.description || saving}
                   className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40 mb-2"

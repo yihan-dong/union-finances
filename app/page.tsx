@@ -294,52 +294,84 @@ export default function LoginPage() {
                   </h1>
                 </motion.div>
 
-                <div className="space-y-3">
+                {/* Avatar pill row */}
+                <div className="flex gap-3 justify-center">
                   {IDENTITIES.map(({ identity }, i) => {
                     const profile = resolveProfile(identity)
+                    const isActive = selectedIdentity === identity
                     return (
-                      <div key={identity}>
-                        {i === 2 && (
-                          <div className="my-1 h-px" style={{ backgroundColor: 'rgba(0,0,0,0.07)' }} />
-                        )}
-                        <motion.button
-                          onClick={() => { setSelectedIdentity(identity); setPin(''); goTo('pin', 1) }}
-                          className="relative w-full flex items-center gap-4 p-5 rounded-2xl text-left active:scale-[0.99]"
+                      <motion.button
+                        key={identity}
+                        onClick={() => {
+                          if (isActive) { setPin(''); goTo('pin', 1) }
+                          else setSelectedIdentity(identity)
+                        }}
+                        className="flex items-center rounded-full"
+                        style={{
+                          padding: '5px',
+                          paddingRight: isActive ? '16px' : '5px',
+                          backgroundColor: isActive ? profile.color : 'rgba(0,0,0,0.07)',
+                          transition: 'background-color 0.28s ease, padding-right 0.28s ease',
+                        }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.08 + i * 0.07, duration: 0.4, type: 'spring', stiffness: 280, damping: 22 }}
+                        whileTap={{ scale: 0.93 }}
+                      >
+                        {/* Avatar */}
+                        <div
+                          className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
                           style={{
-                            backgroundColor: '#FFFFFF',
-                            border: '1px solid rgba(0,0,0,0.07)',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                            backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : profile.color,
+                            transition: 'background-color 0.28s ease',
                           }}
-                          initial={{ opacity: 0, y: 16 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.1 + i * 0.07, duration: 0.35 }}
-                          whileHover={{ boxShadow: '0 3px 12px rgba(0,0,0,0.09)' }}
-                          whileTap={{ scale: 0.98 }}
                         >
-                          <div
-                            className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-semibold overflow-hidden"
-                            style={{ backgroundColor: profile.color }}
-                          >
-                            {profile.avatar_url ? (
-                              <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
-                            ) : (
-                              profile.initials
-                            )}
+                          {profile.avatar_url
+                            ? <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                            : profile.initials}
+                        </div>
+                        {/* Expandable name */}
+                        <div
+                          className="grid"
+                          style={{
+                            gridTemplateColumns: isActive ? '1fr' : '0fr',
+                            transition: 'grid-template-columns 0.28s ease',
+                          }}
+                        >
+                          <div className="overflow-hidden">
+                            <span
+                              className="whitespace-nowrap text-sm font-medium text-white"
+                              style={{ paddingLeft: 10 }}
+                            >
+                              {profile.name}
+                            </span>
                           </div>
-                          <span className="text-xl flex-1" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>
-                            {profile.name}
-                          </span>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                            <polyline points="9 18 15 12 9 6"/>
-                          </svg>
-                        </motion.button>
-                      </div>
+                        </div>
+                      </motion.button>
                     )
                   })}
                 </div>
 
+                {/* Tap-again hint */}
+                <div className="h-8 flex items-center justify-center mt-5">
+                  <AnimatePresence>
+                    {selectedIdentity && (
+                      <motion.p
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.25 }}
+                        className="text-xs"
+                        style={{ color: 'rgba(0,0,0,0.3)' }}
+                      >
+                        tap again to continue →
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 <motion.button
-                  onClick={() => { goTo('password', -1); setSharedPassword('') }}
+                  onClick={() => { goTo('password', -1); setSharedPassword(''); setSelectedIdentity(null) }}
                   className="mt-10 w-full text-xs text-center"
                   style={{ color: 'rgba(0,0,0,0.28)' }}
                   whileTap={{ opacity: 0.5 }}

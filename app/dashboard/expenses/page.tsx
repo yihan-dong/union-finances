@@ -57,16 +57,6 @@ function DocumentIcon({ size = 17 }: { size?: number }) {
   )
 }
 
-function PriceCheckIcon({ size = 17 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      <line x1="11" y1="8" x2="11" y2="14"/>
-      <line x1="8" y1="11" x2="14" y2="11"/>
-    </svg>
-  )
-}
 
 function SpinIcon() {
   return (
@@ -111,10 +101,6 @@ interface ImportTx {
   currency: CurrencyType; type: 'debit' | 'credit'; category: ExpenseCategory; bucket: BucketType
 }
 
-interface PriceResult {
-  product: string; priceRange: string; verdict: 'good deal' | 'fair price' | 'overpriced' | 'unknown'
-  advice: string; sources: string[]
-}
 
 function defaultForm(user: UserIdentity): ExpenseForm {
   return {
@@ -138,12 +124,6 @@ function shineColor(paid_by: PaidByType): string | string[] {
   return USER_COLORS[paid_by] || USER_COLORS.yihan
 }
 
-const VERDICT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  'good deal':  { bg: 'rgba(29,158,117,0.12)', color: '#1D9E75',  label: 'Good deal' },
-  'fair price': { bg: 'rgba(245,158,11,0.12)', color: '#D97706',  label: 'Fair price' },
-  'overpriced': { bg: 'rgba(239,68,68,0.10)',  color: '#EF4444',  label: 'Overpriced' },
-  'unknown':    { bg: 'rgba(0,0,0,0.06)',       color: 'rgba(0,0,0,0.45)', label: 'Unknown' },
-}
 
 // ── Main Component ─────────────────────────────────────────
 export default function ExpensesPage() {
@@ -173,21 +153,17 @@ export default function ExpensesPage() {
   const [importSaving, setImportSaving] = useState(false)
   const pdfRef = useRef<HTMLInputElement>(null)
 
-  // Price check
-  const [priceChecking, setPriceChecking] = useState(false)
-  const [priceResult, setPriceResult] = useState<PriceResult | null>(null)
-  const [showPriceResult, setShowPriceResult] = useState(false)
-  const priceRef = useRef<HTMLInputElement>(null)
+  // FAB expand
+  const [fabOpen, setFabOpen] = useState(false)
 
   // Loading overlay context
-  type LoadCtx = 'scan' | 'import' | 'price-check' | 'save' | 'generic'
+  type LoadCtx = 'scan' | 'import' | 'save' | 'generic'
   const loadingCtx: LoadCtx =
     scanning ? 'scan' :
     importLoading ? 'import' :
-    priceChecking ? 'price-check' :
     saving ? 'save' :
     'generic'
-  const anyLoading = scanning || importLoading || priceChecking || saving
+  const anyLoading = scanning || importLoading || saving
 
   const now = new Date()
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
@@ -276,21 +252,6 @@ export default function ExpensesPage() {
     e.target.value = ''
   }
 
-  async function handlePriceFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return
-    setPriceChecking(true)
-    try {
-      const { base64, mimeType } = await compressImage(file)
-      const res  = await fetch('/api/price-check', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: base64, mimeType }) })
-      const data = await res.json()
-      if (data.product) {
-        setPriceResult(data as PriceResult)
-        setShowPriceResult(true)
-      }
-    } catch { /* silent */ }
-    finally { setPriceChecking(false) }
-    e.target.value = ''
-  }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
@@ -423,9 +384,8 @@ export default function ExpensesPage() {
       <Portal><LoadingOverlay visible={anyLoading} context={loadingCtx} /></Portal>
 
       {/* Hidden inputs */}
-      <input ref={fileRef}  type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanFile} />
-      <input ref={pdfRef}   type="file" accept="application/pdf"               className="hidden" onChange={handleImportFile} />
-      <input ref={priceRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePriceFile} />
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanFile} />
+      <input ref={pdfRef}  type="file" accept="application/pdf"         className="hidden" onChange={handleImportFile} />
 
       {/* ── Month navigator ─────────────────────────────── */}
       <div className="flex items-center justify-between px-1 mb-3">
@@ -561,38 +521,88 @@ export default function ExpensesPage() {
       )}
 
       {/* ── FAB cluster ──────────────────────────────────── */}
-      <div className="fixed right-5 z-40 flex items-center gap-2.5" style={{ bottom: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))' }}>
-        {/* PDF import */}
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => pdfRef.current?.click()} disabled={importLoading}
-          className="w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: importLoading ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.5)' }}
-          title="Import bank statement">
-          {importLoading ? <SpinIcon /> : <DocumentIcon />}
-        </motion.button>
+      <div className="fixed right-5 z-40 flex flex-col items-end gap-2.5"
+        style={{ bottom: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
-        {/* Price check */}
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => priceRef.current?.click()} disabled={priceChecking}
-          className="w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: priceChecking ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.5)' }}
-          title="Price check in Cambodia">
-          {priceChecking ? <SpinIcon /> : <PriceCheckIcon />}
-        </motion.button>
+        {/* Secondary actions — revealed when fab is open */}
+        <AnimatePresence>
+          {fabOpen && (
+            <>
+              {/* PDF import */}
+              <motion.button key="pdf"
+                initial={{ opacity: 0, y: 14, scale: 0.82 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 14, scale: 0.82 }}
+                transition={{ duration: 0.18, delay: 0.04 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => { setFabOpen(false); pdfRef.current?.click() }}
+                disabled={importLoading}
+                className="w-11 h-11 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: importLoading ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.5)' }}
+                title="Import bank statement">
+                {importLoading ? <SpinIcon /> : <DocumentIcon />}
+              </motion.button>
 
-        {/* Scan receipt */}
-        <motion.button whileTap={{ scale: 0.9 }} onClick={() => fileRef.current?.click()} disabled={scanning}
-          className="w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: scanning ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.5)' }}
-          title="Scan receipt">
-          {scanning ? <SpinIcon /> : <CameraIcon />}
-        </motion.button>
+              {/* Scan receipt / camera */}
+              <motion.button key="camera"
+                initial={{ opacity: 0, y: 14, scale: 0.82 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 14, scale: 0.82 }}
+                transition={{ duration: 0.18 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => { setFabOpen(false); fileRef.current?.click() }}
+                disabled={scanning}
+                className="w-11 h-11 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: scanning ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.5)' }}
+                title="Scan receipt">
+                {scanning ? <SpinIcon /> : <CameraIcon />}
+              </motion.button>
 
-        {/* Add expense — main FAB */}
-        <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.04 }} onClick={openAdd}
-          className="w-14 h-14 rounded-full flex items-center justify-center text-white text-3xl font-light"
-          style={{ backgroundColor: user?.color || '#534AB7', boxShadow: `0 6px 22px ${(user?.color || '#534AB7')}55` }}>
-          +
+              {/* Manual add */}
+              <motion.button key="manual"
+                initial={{ opacity: 0, y: 14, scale: 0.82 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 14, scale: 0.82 }}
+                transition={{ duration: 0.18, delay: 0.08 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => { setFabOpen(false); openAdd() }}
+                className="w-11 h-11 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 4px 14px rgba(0,0,0,0.1)', color: 'rgba(0,0,0,0.5)' }}
+                title="Add manually">
+                <PencilIcon />
+              </motion.button>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Main FAB — + rotates to × when open */}
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          whileHover={{ scale: 1.04 }}
+          onClick={() => setFabOpen(v => !v)}
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white"
+          style={{ backgroundColor: user?.color || '#534AB7', boxShadow: `0 6px 22px ${(user?.color || '#534AB7')}55`, fontSize: 28, fontWeight: 300, lineHeight: 1 }}>
+          <motion.span
+            animate={{ rotate: fabOpen ? 45 : 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ display: 'block' }}>
+            +
+          </motion.span>
         </motion.button>
       </div>
+
+      {/* Tap-away backdrop when fab is open */}
+      <AnimatePresence>
+        {fabOpen && (
+          <motion.div
+            className="fixed inset-0 z-30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setFabOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Add / Edit form sheet ─────────────────────────── */}
       <Portal>
@@ -743,69 +753,6 @@ export default function ExpensesPage() {
                   style={{ backgroundColor: user?.color || '#534AB7' }}>
                   {saving ? 'saving…' : formMode === 'edit' ? 'update expense' : 'add expense'}
                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      </Portal>
-
-      {/* ── Price Check Result Sheet ──────────────────────── */}
-      <Portal>
-      <AnimatePresence>
-        {showPriceResult && priceResult && (
-          <motion.div className="fixed inset-0 z-[200] flex items-end"
-            style={{ backgroundColor: 'rgba(0,0,0,0.4)', touchAction: 'none' }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto"
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'tween', duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-              onClick={e => e.stopPropagation()}>
-              {/* Handle */}
-              <div className="flex justify-center pt-3 pb-1">
-                <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
-              </div>
-              <div className="px-6 pt-3 pb-8">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1 pr-3">
-                    <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.3)' }}>product identified</p>
-                    <h3 className="text-lg font-semibold leading-tight" style={{ color: '#1A1A1A' }}>{priceResult.product}</h3>
-                  </div>
-                  <button onClick={() => setShowPriceResult(false)} style={{ color: 'rgba(0,0,0,0.32)', flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Price + Verdict */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                    <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: 'rgba(0,0,0,0.3)' }}>price in cambodia</p>
-                    <p className="text-base font-semibold" style={{ color: '#1A1A1A' }}>{priceResult.priceRange || '—'}</p>
-                  </div>
-                  {(() => {
-                    const vs = VERDICT_STYLE[priceResult.verdict] || VERDICT_STYLE.unknown
-                    return (
-                      <div className="px-4 py-3 rounded-2xl text-center flex-shrink-0" style={{ backgroundColor: vs.bg }}>
-                        <p className="text-sm font-semibold" style={{ color: vs.color }}>{vs.label}</p>
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                {/* Advice */}
-                <div className="px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: 'rgba(0,0,0,0.3)' }}>advice</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(0,0,0,0.7)' }}>{priceResult.advice}</p>
-                </div>
-
-                {/* Sources */}
-                {priceResult.sources?.length > 0 && (
-                  <p className="text-[9px] px-1" style={{ color: 'rgba(0,0,0,0.3)' }}>
-                    sources: {priceResult.sources.join(' · ')}
-                  </p>
-                )}
               </div>
             </motion.div>
           </motion.div>

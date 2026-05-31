@@ -9,38 +9,42 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const systemPrompt = `You are a friendly, sharp financial assistant for a couple using the Union Finances app in Phnom Penh, Cambodia. You help them understand their spending, save money, and make smart financial decisions.
+  const systemPrompt = `You are a sharp, friendly financial assistant for a couple using the Union Finances app in Phnom Penh, Cambodia. Help them understand spending, save money, and make smart financial decisions.
 
 Today: ${today}
-Currency context: They use both USD and KHR (Khmer Riel). 1 USD ≈ 4,100 KHR.
+Currency: USD and KHR (Khmer Riel). 1 USD ≈ 4,100 KHR.
 
-Their financial context this month:
-${context || 'No financial data available yet.'}
+Their financial data this month:
+${context || 'No data loaded yet — answer generally.'}
 
 Guidelines:
-- Be concise and direct — 2-4 sentences max unless they ask for detail
-- Use specific numbers from their data when relevant
-- Give actionable advice, not generic platitudes
-- If they share a photo of a product, identify it and give a Cambodia price estimate
-- Speak naturally, not formally
-- You can be slightly playful but stay focused on finances
-- If you don't have enough data to answer, say so honestly`
+- Be concise and conversational — 2–4 sentences unless they want detail
+- Use their actual numbers when relevant
+- Give specific, actionable advice
+- If they share a photo, identify the product and estimate Cambodia market price
+- No generic platitudes — be direct and honest
+- If data is missing just say so`
 
   const userContent: { type: string; [key: string]: unknown }[] = []
 
   if (image && mimeType) {
     if (mimeType === 'application/pdf') {
-      userContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: image } })
+      userContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: image },
+      })
     } else {
-      userContent.push({ type: 'image', source: { type: 'base64', media_type: mimeType, data: image } })
+      userContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: mimeType, data: image },
+      })
     }
   }
 
-  if (message) {
-    userContent.push({ type: 'text', text: message })
-  } else if (image) {
-    userContent.push({ type: 'text', text: 'What is this product and what would it cost in Phnom Penh, Cambodia? Is it a good deal?' })
-  }
+  userContent.push({
+    type: 'text',
+    text: message || 'What is this and what would it cost in Phnom Penh, Cambodia?',
+  })
 
   try {
     const headers: Record<string, string> = {
@@ -49,13 +53,10 @@ Guidelines:
       'content-type': 'application/json',
     }
 
-    // Add web search for price queries
-    const isLikelyPriceQuery = !!image || message?.toLowerCase().includes('price') || message?.toLowerCase().includes('cost') || message?.toLowerCase().includes('buy') || message?.toLowerCase().includes('cheap')
-    if (isLikelyPriceQuery) {
-      headers['anthropic-beta'] = 'web-search-2025-03-05'
+    // Only add PDF beta if we're sending a PDF
+    if (mimeType === 'application/pdf') {
+      headers['anthropic-beta'] = 'pdfs-2024-09-25'
     }
-
-    const tools = isLikelyPriceQuery ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }] : undefined
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -64,24 +65,26 @@ Guidelines:
         model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         system: systemPrompt,
-        tools,
         messages: [{ role: 'user', content: userContent }],
       }),
     })
 
     if (!response.ok) {
       const err = await response.text()
-      console.error('[assistant] API error:', err)
-      return NextResponse.json({ reply: "I couldn't process that right now. Try again?" }, { status: 500 })
+      console.error('[assistant] API error', response.status, err)
+      return NextResponse.json(
+        { reply: `API error ${response.status} — check Vercel logs.` },
+        { status: 500 },
+      )
     }
 
     const data = await response.json()
-    // Extract text from response (handle tool use blocks)
-    const textBlocks = data.content?.filter((b: { type: string }) => b.type === 'text') ?? []
-    const reply = textBlocks.map((b: { text: string }) => b.text).join('\n').trim() || "I couldn't generate a response."
+    const textBlocks = (data.content ?? []).filter((b: { type: string }) => b.type === 'text')
+    const reply = textBlocks.map((b: { text: string }) => b.text).join('\n').trim()
+      || "I couldn't generate a response."
     return NextResponse.json({ reply })
   } catch (err) {
-    console.error('[assistant] error:', err)
-    return NextResponse.json({ reply: "Something went wrong. Try again." }, { status: 500 })
+    console.error('[assistant] exception:', err)
+    return NextResponse.json({ reply: 'Something went wrong. Try again.' }, { status: 500 })
   }
 }

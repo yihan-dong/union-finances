@@ -273,7 +273,7 @@ export default function BudgetPage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6 pb-4" style={{ overscrollBehavior: 'contain' }}>
+              <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 pb-4" style={{ overscrollBehavior: 'contain', overscrollBehaviorX: 'none', touchAction: 'pan-y' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
                   <button onClick={() => { setShowForm(false); setEditingBudget(null) }} className="p-2 -mr-2" style={{ color: 'rgba(0,0,0,0.32)' }}>

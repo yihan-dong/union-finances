@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/lib/context'
 import TreeBackground from '@/components/TreeBackground'
 import { ModernNav } from '@/components/ui/modern-mobile-menu'
+import { FluidSwirl } from '@/components/ui/fluid-swirl-shader'
 
 const BG_STORAGE_KEY = 'union:finances-bg'
 
@@ -86,6 +87,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F7F6F3', maxWidth: '100vw' }}>
+      {/* Fluid swirl — base background layer */}
+      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <FluidSwirl />
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(180deg, rgba(247,246,243,0.55) 0%, rgba(247,246,243,0.70) 60%, rgba(247,246,243,0.82) 100%)',
+        }} />
+      </div>
+      {/* Custom user photo (overlays shader when set) */}
       <TreeBackground />
       <div className="max-w-md mx-auto relative overflow-x-hidden" style={{ zIndex: 1 }}>
         {/* Header — flows naturally with content */}

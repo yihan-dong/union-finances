@@ -51,6 +51,7 @@ export default function LoginPage() {
   const [selectedIdentity, setSelectedIdentity] = useState<UserIdentity | null>(null)
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState(false)
+  const [pinErrorMsg, setPinErrorMsg] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const heroText = useTypewriter('money together', 55, 200)
@@ -83,10 +84,19 @@ export default function LoginPage() {
   async function handlePinSubmit() {
     if (!selectedIdentity || !selectedEmail || submitting) return
     setSubmitting(true)
+    setPinErrorMsg('')
     const { error } = await signIn(selectedEmail, sharedPassword.trim() + pin)
     if (error) {
+      // Surface a readable reason — helps diagnose "account not created yet" vs wrong credentials
+      const msg = (error as Error).message || ''
+      const friendlyMsg = msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')
+        ? 'wrong password or pin'
+        : msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('no user')
+          ? 'account not set up yet — ask Yihan'
+          : 'sign-in failed — try again'
+      setPinErrorMsg(friendlyMsg)
       setPinError(true)
-      setTimeout(() => { setPinError(false); setPin(''); setSubmitting(false) }, 800)
+      setTimeout(() => { setPinError(false); setPin(''); setSubmitting(false) }, 1200)
     } else {
       setSubmitting(false)
     }
@@ -159,7 +169,7 @@ export default function LoginPage() {
                 </motion.div>
 
                 {/* PIN dots */}
-                <div className="flex justify-center gap-4 mb-10">
+                <div className="flex justify-center gap-4 mb-3">
                   {[0,1,2,3].map(i => (
                     <motion.div
                       key={i}
@@ -178,6 +188,20 @@ export default function LoginPage() {
                       }
                     />
                   ))}
+                </div>
+
+                {/* Error message */}
+                <div className="h-7 flex items-center justify-center mb-7">
+                  <AnimatePresence>
+                    {pinErrorMsg && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        className="text-xs text-center"
+                        style={{ color: 'rgba(220,38,38,0.75)' }}>
+                        {pinErrorMsg}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Numpad */}
@@ -381,6 +405,10 @@ export default function LoginPage() {
                       onKeyDown={e => e.key === 'Enter' && sharedPassword.trim() && goTo('profile', 1)}
                       placeholder="enter your shared password"
                       autoFocus
+                      autoComplete="current-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       className="flex-1 text-sm bg-transparent outline-none"
                       style={{ color: '#1A1A1A' }}
                     />

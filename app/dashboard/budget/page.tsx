@@ -7,6 +7,7 @@ import { ShineBorder } from '@/components/ui/shine-border'
 import type { Budget, Expense, ExpenseCategory } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { CategoryIcon } from '@/components/icons'
+import Portal from '@/components/Portal'
 
 const CATEGORIES: ExpenseCategory[] = [
   'food & dining','rent & utilities','transport','shopping','health','entertainment','travel','subscriptions','other'
@@ -257,6 +258,7 @@ export default function BudgetPage() {
       >+</motion.button>
 
       {/* Add/Edit Budget Sheet */}
+      <Portal>
       <AnimatePresence>
         {showForm && (
           <motion.div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.35)', touchAction: 'none' }}
@@ -319,6 +321,7 @@ export default function BudgetPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   )
 }

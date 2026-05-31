@@ -8,6 +8,7 @@ import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, 
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 import LoadingOverlay from '@/components/LoadingOverlay'
+import Portal from '@/components/Portal'
 
 const CATEGORIES: ExpenseCategory[] = [
   'food & dining','rent & utilities','transport','shopping','health','entertainment','travel','subscriptions','other'
@@ -393,7 +394,7 @@ export default function ExpensesPage() {
   return (
     <div className="px-5 pt-2 pb-4">
       {/* Loading overlay */}
-      <LoadingOverlay visible={anyLoading} context={loadingCtx} />
+      <Portal><LoadingOverlay visible={anyLoading} context={loadingCtx} /></Portal>
 
       {/* Hidden inputs */}
       <input ref={fileRef}  type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanFile} />
@@ -536,6 +537,7 @@ export default function ExpensesPage() {
       </div>
 
       {/* ── Add / Edit form sheet ─────────────────────────── */}
+      <Portal>
       <AnimatePresence>
         {showForm && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
@@ -685,8 +687,10 @@ export default function ExpensesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* ── Price Check Result Sheet ──────────────────────── */}
+      <Portal>
       <AnimatePresence>
         {showPriceResult && priceResult && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
@@ -746,8 +750,10 @@ export default function ExpensesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* ── Import Review Sheet ───────────────────────────── */}
+      <Portal>
       <AnimatePresence>
         {showImport && (
           <motion.div className="fixed inset-0 z-[200] flex items-end"
@@ -815,6 +821,7 @@ export default function ExpensesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   )
 }

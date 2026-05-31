@@ -7,6 +7,7 @@ import { ShineBorder } from '@/components/ui/shine-border'
 import type { Income, IncomeType, UserIdentity } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { IncomeTypeIcon } from '@/components/icons'
+import Portal from '@/components/Portal'
 
 const INCOME_TYPES: IncomeType[] = ['salary', 'freelance', 'investment', 'gift', 'other']
 
@@ -248,6 +249,7 @@ export default function IncomePage() {
       >+</motion.button>
 
       {/* Add Income Sheet */}
+      <Portal>
       <AnimatePresence>
         {showForm && (
           <motion.div
@@ -373,6 +375,7 @@ export default function IncomePage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   )
 }

@@ -4,7 +4,7 @@ export function cn(...classes: (string | undefined | null | false)[]) {
 
 export function formatCurrency(amount: number, currency: 'USD' | 'KHR' = 'USD'): string {
   if (currency === 'KHR') {
-    return '₭' + Math.round(Math.abs(amount)).toLocaleString('en-US')
+    return '៛' + Math.round(Math.abs(amount)).toLocaleString('en-US')
   }
   return '$' + Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }

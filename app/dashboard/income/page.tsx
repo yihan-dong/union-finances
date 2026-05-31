@@ -244,7 +244,7 @@ export default function IncomePage() {
         whileTap={{ scale: 0.88 }}
         onClick={() => { setShowForm(true); setForm(defaultForm(user?.identity || 'yihan')) }}
         className="fixed w-14 h-14 rounded-full flex items-center justify-center text-white text-3xl font-light z-40"
-        style={{ bottom: 108, right: 20, backgroundColor: user?.color || '#1D9E75', boxShadow: `0 6px 22px ${(user?.color || '#1D9E75')}55` }}
+        style={{ bottom: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))', right: 20, backgroundColor: user?.color || '#1D9E75', boxShadow: `0 6px 22px ${(user?.color || '#1D9E75')}55` }}
       >+</motion.button>
 
       {/* Add Income Sheet */}
@@ -256,7 +256,7 @@ export default function IncomePage() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-t-3xl w-full max-w-md max-h-[82vh] flex flex-col"
+              className="bg-white rounded-t-3xl w-full max-w-md max-h-[94vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'tween', duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
               onClick={e => e.stopPropagation()}

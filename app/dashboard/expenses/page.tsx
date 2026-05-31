@@ -193,13 +193,18 @@ export default function ExpensesPage() {
   const year  = now.getFullYear()
 
   async function fetchExpenses() {
-    const startDate = `${year}-${String(month).padStart(2,'0')}-01`
-    const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
-    const { data } = await supabase.from('expenses').select('*')
-      .eq('couple', user?.couple ?? 'union')
-      .gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
-    setExpenses((data as Expense[]) || [])
-    setLoading(false)
+    try {
+      const startDate = `${year}-${String(month).padStart(2,'0')}-01`
+      const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
+      const { data } = await supabase.from('expenses').select('*')
+        .eq('couple', user?.couple ?? 'union')
+        .gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
+      setExpenses((data as Expense[]) || [])
+    } catch {
+      setExpenses([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchExpenses() }, [])
@@ -497,7 +502,7 @@ export default function ExpensesPage() {
       )}
 
       {/* ── FAB cluster ──────────────────────────────────── */}
-      <div className="fixed right-5 z-40 flex items-center gap-2.5" style={{ bottom: 108 }}>
+      <div className="fixed right-5 z-40 flex items-center gap-2.5" style={{ bottom: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))' }}>
         {/* PDF import */}
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => pdfRef.current?.click()} disabled={importLoading}
           className="w-11 h-11 rounded-full flex items-center justify-center"
@@ -536,7 +541,7 @@ export default function ExpensesPage() {
           <motion.div className="fixed inset-0 z-[200] flex items-end"
             style={{ backgroundColor: 'rgba(0,0,0,0.4)', touchAction: 'none' }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto max-h-[86vh] flex flex-col"
+            <motion.div className="bg-white rounded-t-3xl w-full max-w-md mx-auto max-h-[94vh] flex flex-col"
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'tween', duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
               onClick={e => e.stopPropagation()} style={{ overscrollBehavior: 'contain' }}>
@@ -559,7 +564,7 @@ export default function ExpensesPage() {
                 {/* Amount */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>amount</label>
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
-                  <span style={{ color: 'rgba(0,0,0,0.35)' }}>{form.currency === 'KHR' ? '₭' : '$'}</span>
+                  <span style={{ color: 'rgba(0,0,0,0.35)' }}>{form.currency === 'KHR' ? '៛' : '$'}</span>
                   <input type="number" inputMode="decimal" value={form.amount}
                     onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
                     placeholder="0.00" className="flex-1 text-2xl font-semibold bg-transparent outline-none"
@@ -650,7 +655,7 @@ export default function ExpensesPage() {
                         ? { backgroundColor: '#1A1A1A', color: '#fff' }
                         : { backgroundColor: 'rgba(0,0,0,0.04)', color: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,0,0,0.07)' }
                       }>
-                      {c === 'USD' ? '$ USD' : '₭ KHR'}
+                      {c === 'USD' ? '$ USD' : '៛ KHR'}
                     </button>
                   ))}
                 </div>

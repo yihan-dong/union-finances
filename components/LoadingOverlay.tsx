@@ -70,7 +70,7 @@ function ProgressDots() {
     <div className="flex items-center gap-1.5">
       {[0, 1, 2].map(i => (
         <motion.div key={i} className="w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}
+          style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
           animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
           transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }} />
       ))}
@@ -78,9 +78,9 @@ function ProgressDots() {
   )
 }
 
-function Spinner({ color = '#fff' }: { color?: string }) {
+function Spinner({ color = 'rgba(0,0,0,0.5)' }: { color?: string }) {
   return (
-    <motion.svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color}
+    <motion.svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round"
       animate={{ rotate: 360 }}
       transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}>
@@ -122,7 +122,7 @@ export default function LoadingOverlay({ visible, context = 'generic', label }: 
       {show && (
         <motion.div
           className="fixed inset-0 z-[500] flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(3px)' }}
+          style={{ backgroundColor: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(8px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -131,30 +131,30 @@ export default function LoadingOverlay({ visible, context = 'generic', label }: 
           <motion.div
             className="mx-6 w-full max-w-[320px] rounded-3xl overflow-hidden"
             style={{
-              background: 'linear-gradient(145deg, rgba(30,28,60,0.97) 0%, rgba(20,38,52,0.97) 100%)',
-              border: '1px solid rgba(255,255,255,0.13)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              border: '1px solid rgba(255,255,255,0.9)',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.12), 0 2px 12px rgba(0,0,0,0.06)',
             }}
             initial={{ opacity: 0, scale: 0.88, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 8 }}
             transition={{ type: 'tween', duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
 
-            {/* Top stripe — animated gradient bar */}
+            {/* Top accent bar — brand gradient */}
             <div className="relative h-1 w-full overflow-hidden">
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, #534AB7, #1D9E75)' }} />
               <motion.div className="absolute inset-y-0 w-[60%] rounded-full"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)' }}
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)' }}
                 animate={{ x: ['-60%', '200%'] }}
                 transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.4 }} />
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, #534AB7, #1D9E75)' }} />
             </div>
 
             <div className="px-6 py-5">
               {/* Header row */}
               <div className="flex items-center gap-3 mb-5">
-                <Spinner color="rgba(255,255,255,0.85)" />
+                <Spinner color="rgba(0,0,0,0.45)" />
                 <div>
-                  <p className="text-xs uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em' }}>
+                  <p className="text-xs uppercase tracking-widest font-medium" style={{ color: 'rgba(0,0,0,0.35)', letterSpacing: '0.12em' }}>
                     {actionLabel}
                   </p>
                   <ProgressDots />
@@ -163,17 +163,17 @@ export default function LoadingOverlay({ visible, context = 'generic', label }: 
 
               {/* Tip card */}
               <div className="rounded-2xl px-4 py-3.5 relative overflow-hidden"
-                style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                 {/* subtle shimmer */}
-                <motion.div className="absolute inset-0 opacity-10"
-                  style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%)' }}
+                <motion.div className="absolute inset-0 opacity-30"
+                  style={{ background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.8) 50%, transparent 60%)' }}
                   animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear', repeatDelay: 1 }} />
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', repeatDelay: 0.8 }} />
 
                 <AnimatePresence mode="wait">
                   <motion.p key={tipIndex}
                     className="text-[13px] leading-relaxed relative z-10"
-                    style={{ color: 'rgba(255,255,255,0.82)' }}
+                    style={{ color: 'rgba(0,0,0,0.62)' }}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
@@ -190,7 +190,7 @@ export default function LoadingOverlay({ visible, context = 'generic', label }: 
                     style={{
                       width: i === tipIndex ? 16 : 4,
                       height: 4,
-                      backgroundColor: i === tipIndex ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.18)',
+                      backgroundColor: i === tipIndex ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.1)',
                     }} />
                 ))}
               </div>

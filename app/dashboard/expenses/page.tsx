@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, PaidByType } from '@/lib/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 import LoadingOverlay from '@/components/LoadingOverlay'
 import Portal from '@/components/Portal'
@@ -461,9 +461,21 @@ export default function ExpensesPage() {
         <div className="space-y-4">
           {grouped.map(({ date, items }, gi) => (
             <motion.div key={date} custom={gi} variants={fadeUp} initial="hidden" animate="visible">
-              <p className="text-[10px] uppercase tracking-widest mb-2 px-1" style={{ color: 'rgba(0,0,0,0.3)' }}>
-                {formatDate(date)}
-              </p>
+              {(() => {
+                const dayTotal = items.reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
+                return (
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(0,0,0,0.3)' }}>
+                      {formatDate(date)}
+                    </p>
+                    {dayTotal > 0 && (
+                      <p className="text-[10px] font-medium" style={{ color: 'rgba(0,0,0,0.35)' }}>
+                        −${dayTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
               <div className="space-y-2">
                 {items.map(exp => (
                   <div key={exp.id} className="relative rounded-2xl p-4 overflow-hidden"

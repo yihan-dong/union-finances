@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Budget, Expense, ExpenseCategory } from '@/lib/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, toUSD } from '@/lib/utils'
 import { CategoryIcon } from '@/components/icons'
 import Portal from '@/components/Portal'
 
@@ -72,7 +72,7 @@ export default function BudgetPage() {
 
     const spend: Record<string, number> = {}
     for (const exp of ((eData as Expense[]) || [])) {
-      spend[exp.category] = (spend[exp.category] || 0) + Number(exp.amount)
+      spend[exp.category] = (spend[exp.category] || 0) + toUSD(Number(exp.amount), exp.currency || 'USD')
     }
     setSpendByCategory(spend)
     setLoading(false)

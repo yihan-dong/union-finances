@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, Income, Goal } from '@/lib/types'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
 
 // ── Category colours ───────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -121,16 +121,13 @@ export default function OverviewPage() {
 
   // ── Calculations ───────────────────────────────────────
   const totalIncome       = incomes.reduce((s, i) => s + Number(i.amount), 0)
-  const usdExpenses       = expenses.filter(e => !e.currency || e.currency === 'USD')
-  const khrExpenses       = expenses.filter(e => e.currency === 'KHR')
-  const totalExpensesUSD  = usdExpenses.reduce((s, e) => s + Number(e.amount), 0)
-  const totalExpensesKHR  = khrExpenses.reduce((s, e) => s + Number(e.amount), 0)
+  const totalExpensesUSD  = expenses.reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
   const saved             = totalIncome - totalExpensesUSD
   const savingsRate       = totalIncome > 0 ? (saved / totalIncome) * 100 : 0
   const wealth            = goals.reduce((s, g) => s + Number(g.current_amount), 0)
 
-  const utilitySpend = usdExpenses.filter(e => !e.bucket || e.bucket === 'utility').reduce((s, e) => s + Number(e.amount), 0)
-  const statusSpend  = usdExpenses.filter(e => e.bucket === 'status').reduce((s, e) => s + Number(e.amount), 0)
+  const utilitySpend = expenses.filter(e => !e.bucket || e.bucket === 'utility').reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
+  const statusSpend  = expenses.filter(e => e.bucket === 'status').reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
   const statusPct    = totalExpensesUSD > 0 ? statusSpend / totalExpensesUSD : 0
 
   const recentExpenses = expenses.slice(0, 6)
@@ -214,11 +211,6 @@ export default function OverviewPage() {
           <p className="text-lg font-semibold leading-none" style={{ color: '#EF4444' }}>
             −{formatCurrency(totalExpensesUSD)}
           </p>
-          {totalExpensesKHR > 0 && (
-            <p className="text-[9px] mt-0.5" style={{ color: 'rgba(239,68,68,0.6)' }}>
-              ₭{Math.round(totalExpensesKHR).toLocaleString()}
-            </p>
-          )}
           <p className="text-[9px] mt-1.5" style={{ color: 'rgba(0,0,0,0.3)' }}>
             {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
           </p>

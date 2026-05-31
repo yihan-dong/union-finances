@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Expense, Income, Budget } from '@/lib/types'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, toUSD } from '@/lib/utils'
 
 interface Message {
   id: string
@@ -131,12 +131,12 @@ export default function AssistantPage() {
       const budgets  = (budFB.data as Budget[])  || []
 
       const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
-      const totalExpenses = expenses.filter(e => !e.currency || e.currency === 'USD').reduce((s, e) => s + Number(e.amount), 0)
+      const totalExpenses = expenses.reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
       const balance = totalIncome - totalExpenses
 
       const byCategory: Record<string, number> = {}
       expenses.forEach(e => {
-        if (!e.currency || e.currency === 'USD') byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount)
+        byCategory[e.category] = (byCategory[e.category] || 0) + toUSD(Number(e.amount), e.currency || 'USD')
       })
       const topCategories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
@@ -146,15 +146,15 @@ export default function AssistantPage() {
         return `  ${b.category}: $${spent.toFixed(0)} / $${Number(b.monthly_limit).toFixed(0)} (${pct}%)`
       }).join('\n')
 
-      const khrExpenses = expenses.filter(e => e.currency === 'KHR').reduce((s, e) => s + Number(e.amount), 0)
-      const allTx = expenses.map(e =>
-        `  ${e.date} | ${e.description} | ${formatCurrency(Number(e.amount), e.currency || 'USD')} | ${e.category} | paid by ${e.paid_by}`
-      ).join('\n')
+      const allTx = expenses.map(e => {
+        const usdAmt = toUSD(Number(e.amount), e.currency || 'USD')
+        const note = e.currency === 'KHR' ? ` (${formatCurrency(Number(e.amount), 'KHR')} → $${usdAmt.toFixed(2)})` : ''
+        return `  ${e.date} | ${e.description} | ${formatCurrency(Number(e.amount), e.currency || 'USD')}${note} | ${e.category} | paid by ${e.paid_by}`
+      }).join('\n')
 
       setContext(`${now.toLocaleString('default', { month: 'long' })} ${year} summary for ${user?.name} (${user?.couple}):
 - Income: ${formatCurrency(totalIncome)}
-- Expenses USD: ${formatCurrency(totalExpenses)} across ${expenses.filter(e => !e.currency || e.currency === 'USD').length} transactions
-${khrExpenses > 0 ? `- Expenses KHR: ៛${Math.round(khrExpenses).toLocaleString()} across ${expenses.filter(e => e.currency === 'KHR').length} transactions` : ''}
+- Total expenses: ${formatCurrency(totalExpenses)} across ${expenses.length} transactions (KHR converted at 4,000/USD)
 - Balance: ${balance >= 0 ? '+' : ''}${formatCurrency(balance)}
 - Top categories: ${topCategories.map(([cat, amt]) => `${cat} ($${amt.toFixed(0)})`).join(', ')}
 ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set yet'}

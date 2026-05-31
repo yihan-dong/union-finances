@@ -65,10 +65,13 @@ export default function TreeBackground() {
     function onStorage(e: StorageEvent) {
       if (e.key === BG_STORAGE_KEY) resolve()
     }
+    function onBgChanged() { resolve() }
     window.addEventListener('storage', onStorage)
+    window.addEventListener('union:bg-changed', onBgChanged)
     return () => {
       cancelled = true
       window.removeEventListener('storage', onStorage)
+      window.removeEventListener('union:bg-changed', onBgChanged)
     }
   }, [])
 

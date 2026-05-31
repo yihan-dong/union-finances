@@ -68,8 +68,11 @@ function AssistantIcon({ active, color }: { active: boolean; color: string }) {
   const c = active ? color : 'rgba(0,0,0,0.28)'
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
-      <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/>
+      {/* Peanut butter jar */}
+      <rect x="3.5" y="3" width="17" height="3" rx="1.5"/>
+      <path d="M5.5 6h13v14a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 20V6z"/>
+      <rect x="7" y="9" width="10" height="7" rx="1.5"/>
+      <path d="M8.5 12.5Q10.5 11 12.5 12.5Q14.5 14 16.5 12.5"/>
     </svg>
   )
 }

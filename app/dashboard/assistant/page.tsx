@@ -228,8 +228,11 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
             style={{ background: `linear-gradient(135deg, ${user?.color || '#534AB7'}22, ${user?.color || '#534AB7'}44)`, border: `1.5px solid ${user?.color || '#534AB7'}33` }}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={user?.color || '#534AB7'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
-              <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/>
+              {/* Peanut butter jar */}
+              <rect x="3.5" y="3" width="17" height="3" rx="1.5"/>
+              <path d="M5.5 6h13v14a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 20V6z"/>
+              <rect x="7" y="9" width="10" height="7" rx="1.5"/>
+              <path d="M8.5 12.5Q10.5 11 12.5 12.5Q14.5 14 16.5 12.5"/>
             </svg>
           </div>
 
@@ -428,7 +431,7 @@ function InputBox({
         ref={inputRef} value={value} onChange={onChange} onKeyDown={onKeyDown}
         placeholder="ask anything…"
         rows={big ? 3 : 1}
-        className={`w-full bg-transparent outline-none resize-none text-sm leading-relaxed px-1.5 ${big ? 'text-center' : ''}`}
+        className="w-full bg-transparent outline-none resize-none text-sm leading-relaxed px-1.5"
         style={{ color: '#1A1A1A', minHeight: big ? 66 : 24, maxHeight: 140, overflowY: 'auto' }} />
 
       {/* Bottom row: attach (left) · send (right) */}

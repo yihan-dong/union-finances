@@ -549,7 +549,7 @@ export default function ExpensesPage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6" style={{ overscrollBehavior: 'contain', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+              <div className="flex-1 overflow-y-auto px-6 pb-4" style={{ overscrollBehavior: 'contain' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>
                     {formMode === 'edit' ? 'edit expense' : 'add expense'}
@@ -664,16 +664,17 @@ export default function ExpensesPage() {
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>note (optional)</label>
                 <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
                   placeholder="any extra details"
-                  className="w-full px-4 py-3 rounded-2xl mb-6 outline-none text-sm"
+                  className="w-full px-4 py-3 rounded-2xl outline-none text-sm"
                   style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }} />
+              </div>
 
-                {/* Error feedback */}
+              {/* ── Sticky save footer — always visible ──────── */}
+              <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
                 {saveError && (
-                  <div className="mb-3 px-4 py-3 rounded-2xl text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}>
+                  <div className="mb-2.5 px-4 py-2.5 rounded-2xl text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}>
                     {saveError}
                   </div>
                 )}
-
                 <button onClick={handleSave} disabled={!form.amount || !form.description || saving}
                   className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                   style={{ backgroundColor: user?.color || '#534AB7' }}>

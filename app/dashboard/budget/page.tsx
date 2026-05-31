@@ -271,7 +271,7 @@ export default function BudgetPage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+              <div className="flex-1 overflow-y-auto px-6 pb-4" style={{ overscrollBehavior: 'contain' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
                   <button onClick={() => { setShowForm(false); setEditingBudget(null) }} className="p-2 -mr-2" style={{ color: 'rgba(0,0,0,0.32)' }}>
@@ -298,14 +298,17 @@ export default function BudgetPage() {
                 )}
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>monthly limit</label>
-                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-6" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                   <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
                   <input type="number" inputMode="decimal" value={form.monthly_limit}
                     onChange={e => setForm(f => ({ ...f, monthly_limit: e.target.value }))}
                     placeholder="0.00"
                     className="flex-1 text-2xl font-semibold bg-transparent outline-none" style={{ color: '#1A1A1A' }} autoFocus />
                 </div>
+              </div>
 
+              {/* Sticky save footer */}
+              <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
                 <button onClick={handleSave} disabled={!form.monthly_limit || saving}
                   className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                   style={{ backgroundColor: user?.color || '#534AB7' }}>

@@ -52,12 +52,7 @@ export default function TreeBackground() {
         }
       }
 
-      if (cancelled || resolved) return
-      // local fallback
-      try {
-        const res = await fetch('/tree.jpg', { method: 'HEAD' })
-        if (res.ok && !cancelled) setBg('/tree.jpg')
-      } catch {}
+      // no local fallback — FluidSwirl handles the default background
     }
 
     resolve()

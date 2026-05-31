@@ -86,7 +86,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <FluidSwirl />
         <div className="absolute inset-0" style={{
-          background: 'linear-gradient(180deg, rgba(247,246,243,0.55) 0%, rgba(247,246,243,0.70) 60%, rgba(247,246,243,0.82) 100%)',
+          background: 'linear-gradient(180deg, rgba(247,246,243,0.30) 0%, rgba(247,246,243,0.50) 60%, rgba(247,246,243,0.68) 100%)',
         }} />
       </div>
       {/* Custom user photo (overlays shader when set) */}

@@ -101,7 +101,11 @@ export default function AssistantPage() {
   useEffect(() => { if (user) buildContext() }, [user])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length === 0 && !sending) return
+    const t = setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+    }, 40)
+    return () => clearTimeout(t)
   }, [messages, sending])
 
   async function buildContext() {
@@ -110,17 +114,21 @@ export default function AssistantPage() {
       const month = now.getMonth() + 1
       const year = now.getFullYear()
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-      const endDate = `${year}-${String(month).padStart(2, '0')}-31`
+      const endDate   = `${year}-${String(month).padStart(2, '0')}-31`
+      const cv = user?.couple ?? 'union'
 
-      const [{ data: expData }, { data: incData }, { data: budData }] = await Promise.all([
-        supabase.from('expenses').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),
-        supabase.from('income').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),
-        supabase.from('budgets').select('*').eq('couple', user?.couple ?? 'union').eq('month', month).eq('year', year),
-      ])
+      // Try with couple filter; if error/empty, fall back to all rows (handles missing column)
+      const expR  = await supabase.from('expenses').select('*').eq('couple', cv).gte('date', startDate).lte('date', endDate)
+      const incR  = await supabase.from('income').select('*').eq('couple', cv).gte('date', startDate).lte('date', endDate)
+      const budR  = await supabase.from('budgets').select('*').eq('couple', cv).eq('month', month).eq('year', year)
 
-      const expenses = (expData as Expense[]) || []
-      const incomes = (incData as Income[]) || []
-      const budgets = (budData as Budget[]) || []
+      const expFB = (expR.error || !expR.data?.length) ? await supabase.from('expenses').select('*').gte('date', startDate).lte('date', endDate) : expR
+      const incFB = (incR.error || !incR.data?.length) ? await supabase.from('income').select('*').gte('date', startDate).lte('date', endDate) : incR
+      const budFB = (budR.error || !budR.data?.length) ? await supabase.from('budgets').select('*').eq('month', month).eq('year', year) : budR
+
+      const expenses = (expFB.data as Expense[]) || []
+      const incomes  = (incFB.data as Income[])  || []
+      const budgets  = (budFB.data as Budget[])  || []
 
       const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
       const totalExpenses = expenses.filter(e => !e.currency || e.currency === 'USD').reduce((s, e) => s + Number(e.amount), 0)
@@ -138,14 +146,19 @@ export default function AssistantPage() {
         return `  ${b.category}: $${spent.toFixed(0)} / $${Number(b.monthly_limit).toFixed(0)} (${pct}%)`
       }).join('\n')
 
-      setContext(`${now.toLocaleString('default', { month: 'long' })} ${year} summary:
+      const khrExpenses = expenses.filter(e => e.currency === 'KHR').reduce((s, e) => s + Number(e.amount), 0)
+      const allTx = expenses.map(e =>
+        `  ${e.date} | ${e.description} | ${formatCurrency(Number(e.amount), e.currency || 'USD')} | ${e.category} | paid by ${e.paid_by}`
+      ).join('\n')
+
+      setContext(`${now.toLocaleString('default', { month: 'long' })} ${year} summary for ${user?.name} (${user?.couple}):
 - Income: ${formatCurrency(totalIncome)}
-- Expenses (USD): ${formatCurrency(totalExpenses)}
+- Expenses USD: ${formatCurrency(totalExpenses)} across ${expenses.filter(e => !e.currency || e.currency === 'USD').length} transactions
+${khrExpenses > 0 ? `- Expenses KHR: ៛${Math.round(khrExpenses).toLocaleString()} across ${expenses.filter(e => e.currency === 'KHR').length} transactions` : ''}
 - Balance: ${balance >= 0 ? '+' : ''}${formatCurrency(balance)}
-- Transactions: ${expenses.length}
 - Top categories: ${topCategories.map(([cat, amt]) => `${cat} ($${amt.toFixed(0)})`).join(', ')}
-${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
-- User: ${user?.name} (couple: ${user?.couple})`)
+${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set yet'}
+- All transactions this month:\n${allTx || '  (none)'}`)
     } catch {
       // context stays empty, API will still work
     }
@@ -218,12 +231,13 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
   const isEmpty = messages.length === 0
 
   return (
-    <div className="flex flex-col" style={{ minHeight: 'calc(100vh - 160px)' }}>
+    <div>
       <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleAttach} />
 
       {/* ── Empty / welcome state ─────────────────────────── */}
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center flex-1 px-5 pt-6 pb-4">
+        <div className="flex flex-col items-center justify-center px-5 pt-6 pb-4"
+          style={{ minHeight: 'calc(100vh - 200px)' }}>
           {/* Icon */}
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
             style={{ background: `linear-gradient(135deg, ${user?.color || '#534AB7'}22, ${user?.color || '#534AB7'}44)`, border: `1.5px solid ${user?.color || '#534AB7'}33` }}>
@@ -279,7 +293,7 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
         </div>
       ) : (
         /* ── Conversation ─────────────────────────────────── */
-        <div className="flex-1 px-4 pt-3 space-y-4" style={{ paddingBottom: 8 }}>
+        <div className="px-4 pt-3 space-y-4">
           <AnimatePresence initial={false}>
             {messages.map(msg => (
               <motion.div key={msg.id}
@@ -292,7 +306,10 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
                   <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center self-end mb-0.5"
                     style={{ background: `linear-gradient(135deg, ${user?.color || '#534AB7'}33, ${user?.color || '#534AB7'}55)` }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={user?.color || '#534AB7'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
+                      <rect x="3.5" y="3" width="17" height="3" rx="1.5"/>
+                      <path d="M5.5 6h13v14a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 20V6z"/>
+                      <rect x="7" y="9" width="10" height="7" rx="1.5"/>
+                      <path d="M8.5 12.5Q10.5 11 12.5 12.5Q14.5 14 16.5 12.5"/>
                     </svg>
                   </div>
                 ) : (
@@ -365,8 +382,8 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
         </div>
       )}
 
-      {/* Spacer when messages exist */}
-      {!isEmpty && <div style={{ height: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }} />}
+      {/* Spacer: clears fixed input bar (6.5rem) + input height (~64px) + breathing room */}
+      {!isEmpty && <div style={{ height: 'calc(10rem + env(safe-area-inset-bottom, 0px))' }} />}
     </div>
   )
 }

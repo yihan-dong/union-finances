@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/context'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { UserIdentity } from '@/lib/types'
+import { FluidSwirl } from '@/components/ui/fluid-swirl-shader'
 
 const IDENTITIES: { identity: UserIdentity; email: string }[] = [
   { identity: 'yihan',   email: 'yihan@union.app'   },
@@ -117,15 +118,32 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen overflow-hidden relative" style={{ backgroundColor: '#F7F6F3' }}>
-      {/* Warm gradient background */}
-      <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'radial-gradient(ellipse 80% 60% at 30% 20%, rgba(83,74,183,0.12) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 80% 80%, rgba(29,158,117,0.10) 0%, transparent 60%), radial-gradient(ellipse 60% 70% at 60% 50%, rgba(247,246,243,0) 0%, rgba(247,246,243,0.6) 100%)',
-          }}
-        />
-      </div>
+
+      {/* ── Fluid swirl — password screen only ────────────── */}
+      <AnimatePresence>
+        {screen === 'password' && (
+          <motion.div
+            aria-hidden
+            className="fixed inset-0 pointer-events-none"
+            style={{ zIndex: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <FluidSwirl />
+            {/* Frosted overlay — keeps text readable */}
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(180deg, rgba(247,246,243,0.45) 0%, rgba(247,246,243,0.62) 60%, rgba(247,246,243,0.80) 100%)',
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Solid background for profile + pin screens */}
+      {screen !== 'password' && (
+        <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0, backgroundColor: '#F7F6F3' }} />
+      )}
 
       <div className="relative" style={{ zIndex: 1 }}>
         <AnimatePresence mode="wait" custom={direction}>

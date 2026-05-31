@@ -125,7 +125,7 @@ export default function IncomePage() {
   const member1Total = incomes.filter(i => i.owner === members[1]).reduce((s, i) => s + Number(i.amount), 0)
   const combined = member0Total + member1Total
 
-  if (loading) return <LoadingScreen fullScreen={false} message="counting what came in" />
+  if (loading) return <LoadingScreen context="your income" accentColor={user?.color} />
 
   return (
     <div className="px-5 pt-2 pb-4">

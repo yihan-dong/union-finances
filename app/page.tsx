@@ -104,7 +104,7 @@ export default function LoginPage() {
     }
   }
 
-  if (loading) return <LoadingScreen message="just a breath" />
+  if (loading) return <LoadingScreen context="your finances" />
 
   return (
     <div className="min-h-screen overflow-hidden relative" style={{ backgroundColor: '#F7F6F3' }}>

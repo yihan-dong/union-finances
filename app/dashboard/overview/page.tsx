@@ -149,29 +149,66 @@ export default function OverviewPage() {
     setCmdMessage('')
     try {
       const today = new Date().toISOString().slice(0, 10)
-      const res  = await fetch('/api/command', {
+      const cv = user.couple ?? 'union'
+
+      // Fetch current + last month budgets to pass as context
+      const lastM = viewMonth === 1 ? 12 : viewMonth - 1
+      const lastY = viewMonth === 1 ? viewYear - 1 : viewYear
+      const [curBudR, prevBudR] = await Promise.all([
+        supabase.from('budgets').select('*').eq('couple', cv).eq('month', viewMonth).eq('year', viewYear),
+        supabase.from('budgets').select('*').eq('couple', cv).eq('month', lastM).eq('year', lastY),
+      ])
+
+      const res = await fetch('/api/command', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text: command, user: user.identity, userName: user.name, today }),
+        body: JSON.stringify({
+          text: command,
+          user: user.identity,
+          userName: user.name,
+          today,
+          viewMonth,
+          viewYear,
+          couple: cv,
+          currentBudgets:  curBudR.data  ?? [],
+          lastMonthBudgets: prevBudR.data ?? [],
+        }),
       })
       const json = await res.json()
       if (json.message) setCmdMessage(json.message)
       for (const action of (json.actions || [])) {
         if (action.type === 'add_expense') {
-          await supabase.from('expenses').insert(action.data)
+          await supabase.from('expenses').insert({ ...action.data, couple: cv })
         } else if (action.type === 'add_income') {
-          await supabase.from('income').insert(action.data)
+          await supabase.from('income').insert({ ...action.data, couple: cv })
         } else if (action.type === 'set_budget') {
           const { data: existing } = await supabase.from('budgets')
             .select('id').eq('category', action.data.category)
-            .eq('owner', 'shared').eq('month', viewMonth).eq('year', viewYear).single()
+            .eq('couple', cv).eq('month', action.data.month ?? viewMonth).eq('year', action.data.year ?? viewYear).maybeSingle()
           if (existing) {
-            await supabase.from('budgets').update({ monthly_limit: action.data.monthly_limit }).eq('id', existing.id)
+            await supabase.from('budgets').update({ monthly_limit: action.data.monthly_limit })
+              .eq('id', existing.id)
           } else {
-            await supabase.from('budgets').insert({ ...action.data, owner: 'shared', month: viewMonth, year: viewYear })
+            await supabase.from('budgets').insert({
+              ...action.data,
+              owner: 'shared',
+              month: action.data.month ?? viewMonth,
+              year: action.data.year ?? viewYear,
+              couple: cv,
+            })
           }
         } else if (action.type === 'add_goal') {
-          await supabase.from('goals').insert(action.data)
+          await supabase.from('goals').insert({ ...action.data, couple: cv })
+        } else if (action.type === 'add_event') {
+          // Writes to the shared calendar_events table (same Supabase project as webapp)
+          await supabase.from('calendar_events').insert({
+            title:      action.data.title,
+            date:       action.data.date,
+            start_time: action.data.start_time ?? '',
+            end_time:   action.data.end_time   ?? '',
+            owner:      action.data.owner      ?? 'both',
+            couple:     cv,
+          })
         }
       }
       if ((json.actions || []).length > 0) fetchData()

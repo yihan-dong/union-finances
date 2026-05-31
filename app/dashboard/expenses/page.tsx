@@ -190,13 +190,25 @@ export default function ExpensesPage() {
   const anyLoading = scanning || importLoading || priceChecking || saving
 
   const now = new Date()
-  const month = now.getMonth() + 1
-  const year  = now.getFullYear()
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
+  const [viewYear,  setViewYear]  = useState(now.getFullYear())
+  const isCurrentMonth = viewMonth === now.getMonth() + 1 && viewYear === now.getFullYear()
+
+  function prevMonth() {
+    if (viewMonth === 1) { setViewMonth(12); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 12) { setViewMonth(1); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
+
+  const monthNames = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
 
   async function fetchExpenses() {
     try {
-      const startDate = `${year}-${String(month).padStart(2,'0')}-01`
-      const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
+      const startDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-01`
+      const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
       const { data } = await supabase.from('expenses').select('*')
         .eq('couple', user?.couple ?? 'union')
         .gte('date', startDate).lte('date', endDate).order('date', { ascending: false })
@@ -208,7 +220,7 @@ export default function ExpensesPage() {
     }
   }
 
-  useEffect(() => { fetchExpenses() }, [])
+  useEffect(() => { fetchExpenses() }, [viewMonth, viewYear])
 
   function openAdd() {
     setFormMode('add'); setEditingId(null)
@@ -414,6 +426,26 @@ export default function ExpensesPage() {
       <input ref={fileRef}  type="file" accept="image/*,application/pdf" className="hidden" onChange={handleScanFile} />
       <input ref={pdfRef}   type="file" accept="application/pdf"               className="hidden" onChange={handleImportFile} />
       <input ref={priceRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePriceFile} />
+
+      {/* ── Month navigator ─────────────────────────────── */}
+      <div className="flex items-center justify-between px-1 mb-3">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ color: 'rgba(0,0,0,0.3)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(0,0,0,0.3)' }}>
+          {monthNames[viewMonth - 1]} {viewYear}
+        </p>
+        <button onClick={nextMonth} disabled={isCurrentMonth}
+          className="w-7 h-7 flex items-center justify-center rounded-full"
+          style={{ color: isCurrentMonth ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.3)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
 
       {/* ── Single combined filter row ───────────────────── */}
       <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 mb-4">

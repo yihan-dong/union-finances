@@ -99,13 +99,23 @@ export default function OverviewPage() {
   const [cmdMessage,  setCmdMessage] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const now   = new Date()
-  const month = now.getMonth() + 1
-  const year  = now.getFullYear()
+  const now = new Date()
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
+  const [viewYear,  setViewYear]  = useState(now.getFullYear())
+  const isCurrentMonth = viewMonth === now.getMonth() + 1 && viewYear === now.getFullYear()
+
+  function prevMonth() {
+    if (viewMonth === 1) { setViewMonth(12); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 12) { setViewMonth(1); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
 
   async function fetchData() {
-    const startDate = `${year}-${String(month).padStart(2,'0')}-01`
-    const endDate   = `${year}-${String(month).padStart(2,'0')}-31`
+    const startDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-01`
+    const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
     const [{ data: expData }, { data: incData }, { data: goalData }] = await Promise.all([
       supabase.from('expenses').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
       supabase.from('income').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),
@@ -117,7 +127,7 @@ export default function OverviewPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [viewMonth, viewYear])
 
   // ── Calculations ───────────────────────────────────────
   const totalIncome       = incomes.reduce((s, i) => s + Number(i.amount), 0)
@@ -153,11 +163,11 @@ export default function OverviewPage() {
         } else if (action.type === 'set_budget') {
           const { data: existing } = await supabase.from('budgets')
             .select('id').eq('category', action.data.category)
-            .eq('owner', 'shared').eq('month', month).eq('year', year).single()
+            .eq('owner', 'shared').eq('month', viewMonth).eq('year', viewYear).single()
           if (existing) {
             await supabase.from('budgets').update({ monthly_limit: action.data.monthly_limit }).eq('id', existing.id)
           } else {
-            await supabase.from('budgets').insert({ ...action.data, owner: 'shared', month, year })
+            await supabase.from('budgets').insert({ ...action.data, owner: 'shared', month: viewMonth, year: viewYear })
           }
         } else if (action.type === 'add_goal') {
           await supabase.from('goals').insert(action.data)
@@ -184,10 +194,25 @@ export default function OverviewPage() {
   return (
     <div className="px-5 pt-2 pb-4 space-y-2.5">
 
-      {/* ── Month label ─────────────────────────────────── */}
-      <p className="text-[10px] uppercase tracking-widest px-1 pt-1" style={{ color: 'rgba(0,0,0,0.3)' }}>
-        {monthNames[month - 1]} {year}
-      </p>
+      {/* ── Month navigator ─────────────────────────────── */}
+      <div className="flex items-center justify-between px-1 pt-1">
+        <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: 'rgba(0,0,0,0.3)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <p className="text-[10px] uppercase tracking-widest" style={{ color: 'rgba(0,0,0,0.3)' }}>
+          {monthNames[viewMonth - 1]} {viewYear}
+        </p>
+        <button onClick={nextMonth} disabled={isCurrentMonth}
+          className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
+          style={{ color: isCurrentMonth ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.3)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
 
       {/* ── Income + Spent (two balanced tiles) ─────────── */}
       <motion.div custom={0} variants={fade} initial="hidden" animate="visible" className="grid grid-cols-2 gap-2.5">

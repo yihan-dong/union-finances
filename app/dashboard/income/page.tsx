@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Income, IncomeType, UserIdentity } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 import { IncomeTypeIcon } from '@/components/icons'
 import Portal from '@/components/Portal'
 
@@ -124,14 +125,7 @@ export default function IncomePage() {
   const member1Total = incomes.filter(i => i.owner === members[1]).reduce((s, i) => s + Number(i.amount), 0)
   const combined = member0Total + member1Total
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center pt-32">
-        <motion.div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
-          animate={{ scale: [1,1.5,1], opacity: [0.3,1,0.3] }} transition={{ duration: 1.2, repeat: Infinity }} />
-      </div>
-    )
-  }
+  if (loading) return <LoadingScreen fullScreen={false} message="counting what came in" />
 
   return (
     <div className="px-5 pt-2 pb-4">

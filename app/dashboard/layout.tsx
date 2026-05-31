@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/context'
 import TreeBackground from '@/components/TreeBackground'
 import { ModernNav } from '@/components/ui/modern-mobile-menu'
 import { FluidSwirl } from '@/components/ui/fluid-swirl-shader'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 
 const BG_STORAGE_KEY = 'union:finances-bg'
 
@@ -77,13 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading && !user) router.replace('/')
   }, [user, loading, router])
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F6F3' }}>
-        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }} />
-      </div>
-    )
-  }
+  if (loading || !user) return <LoadingScreen message="getting everything ready" />
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F7F6F3', maxWidth: '100vw' }}>

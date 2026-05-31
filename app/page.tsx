@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/context'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { UserIdentity } from '@/lib/types'
 import { FluidSwirl } from '@/components/ui/fluid-swirl-shader'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 
 const IDENTITIES: { identity: UserIdentity; email: string }[] = [
   { identity: 'yihan',   email: 'yihan@union.app'   },
@@ -103,18 +104,7 @@ export default function LoginPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F6F3' }}>
-        <motion.div
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
-          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 1.2, repeat: Infinity, type: 'tween', ease: 'easeInOut' }}
-        />
-      </div>
-    )
-  }
+  if (loading) return <LoadingScreen message="just a breath" />
 
   return (
     <div className="min-h-screen overflow-hidden relative" style={{ backgroundColor: '#F7F6F3' }}>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Budget, Expense, ExpenseCategory } from '@/lib/types'
 import { formatCurrency, toUSD } from '@/lib/utils'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 import { CategoryIcon } from '@/components/icons'
 import Portal from '@/components/Portal'
 
@@ -133,14 +134,7 @@ export default function BudgetPage() {
   const budgetedCategories = budgets.map(b => b.category)
   const unbudgetedCategories = CATEGORIES.filter(c => !budgetedCategories.includes(c))
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center pt-32">
-        <motion.div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
-          animate={{ scale: [1,1.5,1], opacity: [0.3,1,0.3] }} transition={{ duration: 1.2, repeat: Infinity }} />
-      </div>
-    )
-  }
+  if (loading) return <LoadingScreen fullScreen={false} message="seeing where you stand" />
 
   return (
     <div className="px-5 pt-2 pb-4">

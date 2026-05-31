@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, PaidByType } from '@/lib/types'
 import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 import LoadingOverlay from '@/components/LoadingOverlay'
 import Portal from '@/components/Portal'
@@ -369,14 +370,7 @@ export default function ExpensesPage() {
   })
   const grouped = groupByDate(filtered)
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center pt-32">
-        <motion.div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
-          animate={{ scale: [1,1.5,1], opacity: [0.3,1,0.3] }} transition={{ duration: 1.2, repeat: Infinity }} />
-      </div>
-    )
-  }
+  if (loading) return <LoadingScreen fullScreen={false} message="seeing where it went" />
 
   return (
     <div className="px-5 pt-2 pb-4">
@@ -744,8 +738,12 @@ export default function ExpensesPage() {
               {/* ── Sticky save footer — always visible ──────── */}
               <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
                 {saveError && (
-                  <div className="mb-2.5 px-4 py-3 rounded-2xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1.5px solid rgba(239,68,68,0.25)' }}>
-                    ⚠️ {saveError}
+                  <div className="mb-2.5 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-2" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1.5px solid rgba(239,68,68,0.25)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    {saveError}
                   </div>
                 )}
                 <button onClick={handleSave} disabled={!form.amount || !form.description || saving}

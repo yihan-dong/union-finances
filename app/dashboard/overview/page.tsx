@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, Income, Goal } from '@/lib/types'
 import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
+import { LoadingScreen } from '@/components/ui/loading-screen'
 
 // ── Category colours ───────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -182,14 +183,7 @@ export default function OverviewPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center pt-32">
-        <motion.div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
-          animate={{ scale: [1,1.5,1], opacity: [0.3,1,0.3] }} transition={{ duration: 1.2, repeat: Infinity }} />
-      </div>
-    )
-  }
+  if (loading) return <LoadingScreen fullScreen={false} message="seeing the full picture" />
 
   return (
     <div className="px-5 pt-2 pb-4 space-y-2.5">

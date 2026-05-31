@@ -29,3 +29,89 @@
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* ── Modern mobile nav ──────────────────────────────────── */
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0);     }
+  20%       { transform: translateY(-4px);  }
+  40%       { transform: translateY(0);     }
+  60%       { transform: translateY(-2px);  }
+  80%       { transform: translateY(0);     }
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  padding: 6px;
+  width: 100%;
+}
+
+.menu__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  position: relative;
+  transition: background 0.18s ease;
+  /* --lineWidth is set via JS */
+  --lineWidth: 0px;
+}
+
+.menu__item.active {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Icon wrapper */
+.menu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* Bounce the SVG when this item becomes active */
+.menu__item.active .menu-icon-svg {
+  animation: iconBounce 0.45s ease forwards;
+}
+
+/* Label text */
+.menu__text {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(0, 0, 0, 0.28);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  position: relative;
+  padding-bottom: 3px;
+  transition: color 0.18s ease;
+  /* underline grows to match text width */
+}
+
+.menu__text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  /* --lineWidth is inherited from the parent .menu__item */
+  width: var(--lineWidth);
+  height: 1.5px;
+  background: var(--component-active-color, #534AB7);
+  border-radius: 2px;
+  transition: width 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.menu__text.active {
+  color: var(--component-active-color, #534AB7);
+}

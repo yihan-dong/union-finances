@@ -338,7 +338,7 @@ export default function ExpensesPage() {
       return
     }
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         amount,
         description: form.description.trim(),
         category: form.category,
@@ -349,14 +349,28 @@ export default function ExpensesPage() {
         note: form.note.trim() || null,
         couple: user?.couple ?? 'union',
       }
-      if (formMode === 'edit' && editingId) {
-        const { error } = await supabase.from('expenses').update(payload).eq('id', editingId)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('expenses').insert(payload)
-        if (error) throw error
+
+      // Save, but if a column (e.g. `couple`) is missing in the DB,
+      // strip it and retry so saving never silently fails.
+      async function save(p: Record<string, unknown>): Promise<void> {
+        const run = () =>
+          formMode === 'edit' && editingId
+            ? supabase.from('expenses').update(p).eq('id', editingId)
+            : supabase.from('expenses').insert(p)
+        const { error } = await run()
+        if (error) {
+          // Postgres "column ... does not exist" → drop the offending key & retry
+          const m = /column ["']?(\w+)["']? .* does not exist|Could not find the '(\w+)' column/i.exec(error.message || '')
+          const badCol = m?.[1] || m?.[2]
+          if (badCol && badCol in p) {
+            const { [badCol]: _drop, ...rest } = p
+            return save(rest)
+          }
+          throw error
+        }
       }
-      // Refetch — also widen range temporarily to catch cross-month dates
+      await save(payload)
+
       await fetchExpenses()
       setShowForm(false)
       setSaveSuccess('')
@@ -620,8 +634,8 @@ export default function ExpensesPage() {
                 {/* Date */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>date</label>
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }} />
+                  className="w-full px-4 rounded-2xl mb-4 outline-none text-sm"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A', height: 46, fontSize: 14, WebkitAppearance: 'none', appearance: 'none' }} />
 
                 {/* Paid by */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>paid from</label>

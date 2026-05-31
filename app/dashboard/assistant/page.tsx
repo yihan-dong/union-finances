@@ -253,6 +253,7 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set'}
               disabled={(!input.trim() && !pendingImage) || sending}
               sending={sending}
               color={user?.color || '#534AB7'}
+              big
             />
           </div>
 
@@ -401,7 +402,7 @@ function PendingImagePreview({
 }
 
 function InputBox({
-  inputRef, value, onChange, onKeyDown, onSend, onAttach, disabled, sending, color,
+  inputRef, value, onChange, onKeyDown, onSend, onAttach, disabled, sending, color, big = false,
 }: {
   inputRef: React.RefObject<HTMLTextAreaElement | null>
   value: string
@@ -412,48 +413,51 @@ function InputBox({
   disabled: boolean
   sending: boolean
   color: string
+  big?: boolean
 }) {
   return (
-    <div className="flex items-end gap-2 px-3 py-2.5 rounded-2xl"
+    <div className="rounded-3xl px-3 pt-3 pb-2.5"
       style={{
         backgroundColor: 'rgba(255,255,255,0.96)',
         border: '1px solid rgba(0,0,0,0.09)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.09)',
+        boxShadow: big ? '0 8px 32px rgba(0,0,0,0.1)' : '0 4px 24px rgba(0,0,0,0.09)',
         backdropFilter: 'blur(14px)',
       }}>
-      {/* Attach */}
-      <button onClick={onAttach}
-        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-        style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.38)' }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-        </svg>
-      </button>
-
-      {/* Textarea */}
+      {/* Textarea on top — full width */}
       <textarea
         ref={inputRef} value={value} onChange={onChange} onKeyDown={onKeyDown}
         placeholder="ask anything…"
-        rows={1}
-        className="flex-1 bg-transparent outline-none resize-none text-sm leading-relaxed"
-        style={{ color: '#1A1A1A', maxHeight: 128, overflowY: 'auto' }} />
+        rows={big ? 3 : 1}
+        className={`w-full bg-transparent outline-none resize-none text-sm leading-relaxed px-1.5 ${big ? 'text-center' : ''}`}
+        style={{ color: '#1A1A1A', minHeight: big ? 66 : 24, maxHeight: 140, overflowY: 'auto' }} />
 
-      {/* Send */}
-      <motion.button whileTap={{ scale: 0.88 }} onClick={onSend} disabled={disabled}
-        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center disabled:opacity-25 transition-opacity"
-        style={{ backgroundColor: color }}>
-        {sending ? (
-          <motion.svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"
-            animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}>
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </motion.svg>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="19" x2="12" y2="5"/>
-            <polyline points="5 12 12 5 19 12"/>
+      {/* Bottom row: attach (left) · send (right) */}
+      <div className="flex items-center justify-between mt-1.5">
+        <button onClick={onAttach}
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+          style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'rgba(0,0,0,0.4)' }}
+          title="attach image or PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
           </svg>
-        )}
-      </motion.button>
+        </button>
+
+        <motion.button whileTap={{ scale: 0.88 }} onClick={onSend} disabled={disabled}
+          className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-25 transition-opacity"
+          style={{ backgroundColor: color }}>
+          {sending ? (
+            <motion.svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"
+              animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </motion.svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"/>
+              <polyline points="5 12 12 5 19 12"/>
+            </svg>
+          )}
+        </motion.button>
+      </div>
     </div>
   )
 }

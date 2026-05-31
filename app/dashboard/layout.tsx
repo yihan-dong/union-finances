@@ -101,9 +101,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F7F6F3' }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F7F6F3', maxWidth: '100vw' }}>
       <TreeBackground />
-      <div className="max-w-md mx-auto relative" style={{ zIndex: 1 }}>
+      <div className="max-w-md mx-auto relative overflow-x-hidden" style={{ zIndex: 1 }}>
         {/* Header — flows naturally with content */}
         <header className="flex items-center justify-between px-6 pt-12 pb-3">
           <span className="text-2xl" style={{ fontFamily: 'var(--font-serif)', color: '#1A1A1A' }}>

@@ -147,15 +147,15 @@ export default function BudgetPage() {
       {/* Month selector */}
       <motion.div
         custom={0} variants={fade} initial="hidden" animate="visible"
-        className="flex items-center justify-between px-5 py-3 rounded-2xl mb-4"
-        style={GLASS}
+        className="flex items-center justify-between px-4 py-2 rounded-xl mb-4"
+        style={{ backgroundColor: 'rgba(255,255,255,0.75)', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
       >
-        <button onClick={prevMonth} style={{ color: 'rgba(0,0,0,0.35)' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <button onClick={prevMonth} className="p-1" style={{ color: 'rgba(0,0,0,0.35)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{monthNames[viewMonth - 1]} {viewYear}</p>
-        <button onClick={nextMonth} style={{ color: 'rgba(0,0,0,0.35)' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <p className="text-xs font-medium" style={{ color: 'rgba(0,0,0,0.55)' }}>{monthNames[viewMonth - 1]} {viewYear}</p>
+        <button onClick={nextMonth} className="p-1" style={{ color: 'rgba(0,0,0,0.35)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </motion.div>
 
@@ -302,8 +302,11 @@ export default function BudgetPage() {
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>monthly limit</label>
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                   <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
-                  <input type="number" inputMode="decimal" value={form.monthly_limit}
-                    onChange={e => setForm(f => ({ ...f, monthly_limit: e.target.value }))}
+                  <input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={form.monthly_limit}
+                    onChange={e => {
+                      const v = e.target.value
+                      if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v)) setForm(f => ({ ...f, monthly_limit: v }))
+                    }}
                     placeholder="0.00"
                     className="flex-1 text-2xl font-semibold bg-transparent outline-none" style={{ color: '#1A1A1A' }} autoFocus />
                 </div>

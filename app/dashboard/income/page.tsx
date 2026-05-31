@@ -281,9 +281,12 @@ export default function IncomePage() {
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-1" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                   <span style={{ color: 'rgba(0,0,0,0.35)' }}>$</span>
                   <input
-                    type="number" inputMode="decimal"
+                    type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*"
                     value={form.amount}
-                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                    onChange={e => {
+                      const v = e.target.value
+                      if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v)) setForm(f => ({ ...f, amount: v }))
+                    }}
                     placeholder="0.00"
                     className="flex-1 text-2xl font-semibold bg-transparent outline-none"
                     style={{ color: '#1A1A1A' }}

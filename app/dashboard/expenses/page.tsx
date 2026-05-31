@@ -212,14 +212,14 @@ export default function ExpensesPage() {
 
   function openAdd() {
     setFormMode('add'); setEditingId(null)
-    setSaveError(''); setSaveSuccess('')
+    setSaveError(''); setSaveSuccess(''); setSaving(false)
     setForm(defaultForm(user?.identity || 'yihan'))
     setShowForm(true)
   }
 
   function openEdit(exp: Expense) {
     setFormMode('edit'); setEditingId(exp.id)
-    setSaveError(''); setSaveSuccess('')
+    setSaveError(''); setSaveSuccess(''); setSaving(false)
     setForm({
       amount: String(exp.amount), description: exp.description, category: exp.category,
       date: exp.date, paid_by: exp.paid_by, bucket: exp.bucket || 'utility',
@@ -581,8 +581,11 @@ export default function ExpensesPage() {
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>amount</label>
                 <div className="flex items-center gap-2 px-4 py-3 rounded-2xl mb-4" style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)' }}>
                   <span style={{ color: 'rgba(0,0,0,0.35)' }}>{form.currency === 'KHR' ? '៛' : '$'}</span>
-                  <input type="number" inputMode="decimal" value={form.amount}
-                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                  <input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={form.amount}
+                    onChange={e => {
+                      const v = e.target.value
+                      if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v)) setForm(f => ({ ...f, amount: v }))
+                    }}
                     placeholder="0.00" className="flex-1 text-2xl font-semibold bg-transparent outline-none"
                     style={{ color: '#1A1A1A' }} autoFocus />
                 </div>
@@ -687,8 +690,8 @@ export default function ExpensesPage() {
               {/* ── Sticky save footer — always visible ──────── */}
               <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
                 {saveError && (
-                  <div className="mb-2.5 px-4 py-2.5 rounded-2xl text-xs" style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}>
-                    {saveError}
+                  <div className="mb-2.5 px-4 py-3 rounded-2xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1.5px solid rgba(239,68,68,0.25)' }}>
+                    ⚠️ {saveError}
                   </div>
                 )}
                 <button onClick={handleSave} disabled={!form.amount || !form.description || saving}

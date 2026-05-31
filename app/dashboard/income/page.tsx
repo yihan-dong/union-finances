@@ -265,10 +265,10 @@ export default function IncomePage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ overscrollBehavior: 'contain' }}>
+              <div className="flex-1 overflow-y-auto px-6" style={{ overscrollBehavior: 'contain', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>add income</h3>
-                  <button onClick={() => setShowForm(false)} style={{ color: 'rgba(0,0,0,0.32)' }}>
+                  <button onClick={() => setShowForm(false)} className="p-2 -mr-2" style={{ color: 'rgba(0,0,0,0.32)' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -359,7 +359,7 @@ export default function IncomePage() {
                 <button
                   onClick={handleAdd}
                   disabled={!form.amount || !form.source || saving}
-                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40 mb-2"
+                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                   style={{ backgroundColor: user?.color || '#1D9E75' }}
                 >
                   {saving ? 'saving…' : 'add income'}

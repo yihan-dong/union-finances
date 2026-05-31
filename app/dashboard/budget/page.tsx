@@ -271,10 +271,10 @@ export default function BudgetPage() {
               <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                 <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.12)' }} />
               </div>
-              <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+              <div className="flex-1 overflow-y-auto px-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
                 <div className="flex items-center justify-between mb-5 pt-2">
                   <h3 className="text-xl" style={{ fontFamily: 'var(--font-serif)' }}>{editingBudget ? 'edit budget' : 'set budget'}</h3>
-                  <button onClick={() => { setShowForm(false); setEditingBudget(null) }} style={{ color: 'rgba(0,0,0,0.32)' }}>
+                  <button onClick={() => { setShowForm(false); setEditingBudget(null) }} className="p-2 -mr-2" style={{ color: 'rgba(0,0,0,0.32)' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -307,7 +307,7 @@ export default function BudgetPage() {
                 </div>
 
                 <button onClick={handleSave} disabled={!form.monthly_limit || saving}
-                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40 mb-2"
+                  className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                   style={{ backgroundColor: user?.color || '#534AB7' }}>
                   {saving ? 'saving…' : editingBudget ? 'update' : 'set budget'}
                 </button>

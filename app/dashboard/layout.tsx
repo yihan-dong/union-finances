@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/context'
 import TreeBackground from '@/components/TreeBackground'
 import { ModernNav } from '@/components/ui/modern-mobile-menu'
 import { FluidSwirl } from '@/components/ui/fluid-swirl-shader'
+import { BitcoinBackground } from '@/components/ui/bitcoin-background'
 import { LoadingScreen } from '@/components/ui/loading-screen'
 
 const BG_STORAGE_KEY = 'union:finances-bg'
@@ -47,13 +48,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const bgInputRef = useRef<HTMLInputElement>(null)
   const [hasBg, setHasBg] = useState(false)
   const [bgUploading, setBgUploading] = useState(false)
+  const [bgStyle, setBgStyle] = useState<'swirl' | 'bitcoin'>('swirl')
 
   useEffect(() => {
     try {
       const v = localStorage.getItem(BG_STORAGE_KEY)
       setHasBg(!!v && v !== 'DEFAULT')
     } catch {}
+    try {
+      const s = localStorage.getItem('union:bg-style') as 'swirl' | 'bitcoin' | null
+      if (s === 'bitcoin') setBgStyle('bitcoin')
+    } catch {}
   }, [])
+
+  function toggleBgStyle() {
+    const next = bgStyle === 'swirl' ? 'bitcoin' : 'swirl'
+    setBgStyle(next)
+    try { localStorage.setItem('union:bg-style', next) } catch {}
+  }
 
   async function handleBgFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
@@ -82,9 +94,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F7F6F3', maxWidth: '100vw' }}>
-      {/* Fluid swirl — base background layer */}
+      {/* Background layer — swirl or bitcoin */}
       <div aria-hidden className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-        <FluidSwirl />
+        {bgStyle === 'bitcoin' ? (
+          <BitcoinBackground color="#F7931A" count={22} />
+        ) : (
+          <FluidSwirl />
+        )}
         <div className="absolute inset-0" style={{
           background: 'linear-gradient(180deg, rgba(247,246,243,0.30) 0%, rgba(247,246,243,0.50) 60%, rgba(247,246,243,0.68) 100%)',
         }} />
@@ -98,7 +114,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {pageTitle}
           </span>
           <div className="flex items-center gap-2">
-            {/* Background picker */}
+            {/* Background style toggle — swirl ↔ bitcoin */}
+            <button
+              onClick={toggleBgStyle}
+              className="w-7 h-7 flex items-center justify-center rounded-full transition-colors text-sm font-bold"
+              style={{ color: bgStyle === 'bitcoin' ? '#F7931A' : 'rgba(0,0,0,0.3)' }}
+              title={bgStyle === 'bitcoin' ? 'switch to swirl' : 'switch to bitcoin'}
+            >
+              ₿
+            </button>
+
+            {/* Background photo picker */}
             <input ref={bgInputRef} type="file" accept="image/*" className="hidden" onChange={handleBgFile} />
             {hasBg ? (
               <button onClick={resetBg} className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"

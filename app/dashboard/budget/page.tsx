@@ -53,6 +53,7 @@ export default function BudgetPage() {
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null)
   const [form, setForm] = useState<AddBudgetForm>({ category: 'food & dining', monthly_limit: '' })
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const now = new Date()
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
@@ -93,31 +94,40 @@ export default function BudgetPage() {
   async function handleSave() {
     if (!form.monthly_limit || saving) return
     setSaving(true)
-    if (editingBudget) {
-      await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', editingBudget.id)
-    } else {
-      const { data: existing } = await supabase.from('budgets').select('id')
-        .eq('category', form.category).eq('owner', 'shared')
-        .eq('couple', user?.couple ?? 'union')
-        .eq('month', viewMonth).eq('year', viewYear).single()
-      if (existing) {
-        await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', existing.id)
+    setSaveError('')
+    try {
+      if (editingBudget) {
+        const { error } = await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', editingBudget.id)
+        if (error) throw error
       } else {
-        await supabase.from('budgets').insert({
-          category: form.category,
-          monthly_limit: parseFloat(form.monthly_limit),
-          owner: 'shared',
-          month: viewMonth,
-          year: viewYear,
-          couple: user?.couple ?? 'union',
-        })
+        const { data: existing } = await supabase.from('budgets').select('id')
+          .eq('category', form.category).eq('couple', user?.couple ?? 'union')
+          .eq('month', viewMonth).eq('year', viewYear).maybeSingle()
+        if (existing) {
+          const { error } = await supabase.from('budgets').update({ monthly_limit: parseFloat(form.monthly_limit) }).eq('id', existing.id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.from('budgets').insert({
+            category: form.category,
+            monthly_limit: parseFloat(form.monthly_limit),
+            owner: 'shared',
+            month: viewMonth,
+            year: viewYear,
+            couple: user?.couple ?? 'union',
+          })
+          if (error) throw error
+        }
       }
+      await fetchData()
+      setShowForm(false)
+      setEditingBudget(null)
+      setForm({ category: 'food & dining', monthly_limit: '' })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'save failed'
+      setSaveError(`couldn't save — ${msg}`)
+    } finally {
+      setSaving(false)
     }
-    await fetchData()
-    setShowForm(false)
-    setEditingBudget(null)
-    setForm({ category: 'food & dining', monthly_limit: '' })
-    setSaving(false)
   }
 
   async function handleDelete(id: string) {
@@ -308,6 +318,15 @@ export default function BudgetPage() {
 
               {/* Sticky save footer */}
               <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
+                {saveError && (
+                  <div className="mb-2.5 px-4 py-3 rounded-2xl text-sm flex items-center gap-2" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1.5px solid rgba(239,68,68,0.25)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    {saveError}
+                  </div>
+                )}
                 <button onClick={handleSave} disabled={!form.monthly_limit || saving}
                   className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                   style={{ backgroundColor: user?.color || '#534AB7' }}>

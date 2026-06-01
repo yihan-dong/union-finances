@@ -75,6 +75,7 @@ export default function IncomePage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<AddIncomeForm>(defaultForm(user?.identity || 'yihan'))
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [savingsTip, setSavingsTip] = useState<number | null>(null)
 
   const now = new Date()
@@ -97,8 +98,9 @@ export default function IncomePage() {
   async function handleAdd() {
     if (!form.amount || !form.source || saving) return
     setSaving(true)
+    setSaveError('')
     const amount = parseFloat(form.amount)
-    await supabase.from('income').insert({
+    const { error } = await supabase.from('income').insert({
       amount,
       source: form.source.trim(),
       type: form.type,
@@ -107,6 +109,11 @@ export default function IncomePage() {
       recurring: form.recurring,
       couple: user?.couple ?? 'union',
     })
+    if (error) {
+      setSaveError(`couldn't save — ${error.message}`)
+      setSaving(false)
+      return
+    }
     await fetchIncome()
     setForm(defaultForm(user?.identity || 'yihan'))
     setShowForm(false)
@@ -359,6 +366,15 @@ export default function IncomePage() {
 
               {/* Sticky save footer */}
               <div className="flex-shrink-0 px-6 pt-3 border-t" style={{ borderColor: 'rgba(0,0,0,0.06)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}>
+                {saveError && (
+                  <div className="mb-2.5 px-4 py-3 rounded-2xl text-sm flex items-center gap-2" style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1.5px solid rgba(239,68,68,0.25)' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    {saveError}
+                  </div>
+                )}
                 <button
                   onClick={handleAdd}
                   disabled={!form.amount || !form.source || saving}

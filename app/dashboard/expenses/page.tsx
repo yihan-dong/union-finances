@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, PaidByType } from '@/lib/types'
 import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
-import { LoadingScreen } from '@/components/ui/loading-screen'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 import LoadingOverlay from '@/components/LoadingOverlay'
 import Portal from '@/components/Portal'
@@ -370,7 +369,7 @@ export default function ExpensesPage() {
   })
   const grouped = groupByDate(filtered)
 
-  if (loading) return <LoadingScreen />
+  if (loading) return null
 
   return (
     <div className="px-5 pt-2 pb-4">

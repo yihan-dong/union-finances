@@ -6,7 +6,6 @@ import { motion } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Expense, Income, Goal } from '@/lib/types'
 import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
-import { LoadingScreen } from '@/components/ui/loading-screen'
 
 // ── Category colours ───────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -220,7 +219,7 @@ export default function OverviewPage() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (loading) return null
 
   return (
     <div className="px-5 pt-2 pb-4 space-y-2.5">

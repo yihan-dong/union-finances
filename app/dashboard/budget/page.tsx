@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Budget, Expense, ExpenseCategory } from '@/lib/types'
 import { formatCurrency, toUSD } from '@/lib/utils'
-import { LoadingScreen } from '@/components/ui/loading-screen'
 import { CategoryIcon } from '@/components/icons'
 import Portal from '@/components/Portal'
 
@@ -144,7 +143,7 @@ export default function BudgetPage() {
   const budgetedCategories = budgets.map(b => b.category)
   const unbudgetedCategories = CATEGORIES.filter(c => !budgetedCategories.includes(c))
 
-  if (loading) return <LoadingScreen />
+  if (loading) return null
 
   return (
     <div className="px-5 pt-2 pb-4">

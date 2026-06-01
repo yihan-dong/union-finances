@@ -62,7 +62,7 @@ export default function BudgetPage() {
 
   async function fetchData() {
     const startDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-01`
-    const endDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
+    const endDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(new Date(viewYear, viewMonth, 0).getDate()).padStart(2,'0')}`
 
     const [{ data: bData }, { data: eData }] = await Promise.all([
       supabase.from('budgets').select('*').eq('couple', user?.couple ?? 'union').eq('month', viewMonth).eq('year', viewYear),

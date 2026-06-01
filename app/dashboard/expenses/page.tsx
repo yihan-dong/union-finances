@@ -184,7 +184,7 @@ export default function ExpensesPage() {
   async function fetchExpenses() {
     try {
       const startDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-01`
-      const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
+      const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(new Date(viewYear, viewMonth, 0).getDate()).padStart(2,'0')}`
       const { data } = await supabase.from('expenses').select('*')
         .eq('couple', user?.couple ?? 'union')
         .gte('date', startDate).lte('date', endDate).order('date', { ascending: false })

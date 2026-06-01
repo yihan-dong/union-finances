@@ -83,7 +83,7 @@ export default function IncomePage() {
 
   async function fetchIncome() {
     const startDate = `${year}-${String(month).padStart(2,'0')}-01`
-    const endDate = `${year}-${String(month).padStart(2,'0')}-31`
+    const endDate = `${year}-${String(month).padStart(2,'0')}-${String(new Date(year, month, 0).getDate()).padStart(2,'0')}`
     const { data } = await supabase.from('income').select('*')
       .eq('couple', user?.couple ?? 'union')
       .gte('date', startDate).lte('date', endDate)

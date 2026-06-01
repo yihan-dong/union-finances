@@ -115,7 +115,7 @@ export default function OverviewPage() {
 
   async function fetchData() {
     const startDate = `${viewYear}-${String(viewMonth).padStart(2,'0')}-01`
-    const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-31`
+    const endDate   = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(new Date(viewYear, viewMonth, 0).getDate()).padStart(2,'0')}`
     const [{ data: expData }, { data: incData }, { data: goalData }] = await Promise.all([
       supabase.from('expenses').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate).order('date', { ascending: false }),
       supabase.from('income').select('*').eq('couple', user?.couple ?? 'union').gte('date', startDate).lte('date', endDate),

@@ -244,8 +244,9 @@ export default function ExpensesPage() {
       if (data.bucket === 'status' || data.bucket === 'utility') scanned.bucket = data.bucket
       if (data.currency === 'KHR') scanned.currency = 'KHR'
       setFormMode('add'); setEditingId(null)
-      setSaveError('')
-      setForm(f => ({ ...f, ...scanned }))
+      setSaveError(''); setSaveSuccess(''); setSaving(false)
+      // Reset to a clean default first so stale state (e.g. old date) doesn't leak in
+      setForm({ ...defaultForm(user?.identity || 'yihan'), ...scanned })
       setShowForm(true)
     } catch { /* silent */ }
     finally { setScanning(false) }
@@ -344,9 +345,19 @@ export default function ExpensesPage() {
       }
       await save(payload)
 
-      await fetchExpenses()
+      // If the expense date is in a different month than the current view,
+      // navigate there — otherwise the fetch returns nothing and it looks broken
+      const saved = new Date(form.date)
+      const savedMonth = saved.getMonth() + 1
+      const savedYear  = saved.getFullYear()
+      if (savedMonth !== viewMonth || savedYear !== viewYear) {
+        setViewMonth(savedMonth)
+        setViewYear(savedYear)
+        // useEffect on viewMonth/viewYear will trigger fetchExpenses
+      } else {
+        await fetchExpenses()
+      }
       setShowForm(false)
-      setSaveSuccess('')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message || 'save failed'
       setSaveError(`couldn't save — ${msg}`)

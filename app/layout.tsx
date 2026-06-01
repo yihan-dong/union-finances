@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Instrument_Serif } from 'next/font/google'
 import { AuthProvider } from '@/lib/context'
+import { AndroidClass } from '@/components/AndroidClass'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-sans', subsets: ['latin'] })
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${instrumentSerif.variable}`}>
       <body className="min-h-screen bg-[#F7F6F3]">
+        <AndroidClass />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

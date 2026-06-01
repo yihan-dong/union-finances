@@ -370,7 +370,7 @@ export default function ExpensesPage() {
   })
   const grouped = groupByDate(filtered)
 
-  if (loading) return <LoadingScreen context="your expenses" accentColor={user?.color} />
+  if (loading) return <LoadingScreen />
 
   return (
     <div className="px-5 pt-2 pb-4">

@@ -144,7 +144,7 @@ export default function BudgetPage() {
   const budgetedCategories = budgets.map(b => b.category)
   const unbudgetedCategories = CATEGORIES.filter(c => !budgetedCategories.includes(c))
 
-  if (loading) return <LoadingScreen context="your budget" accentColor={user?.color} />
+  if (loading) return <LoadingScreen />
 
   return (
     <div className="px-5 pt-2 pb-4">

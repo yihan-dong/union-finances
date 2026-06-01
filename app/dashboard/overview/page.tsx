@@ -220,7 +220,7 @@ export default function OverviewPage() {
     }
   }
 
-  if (loading) return <LoadingScreen context="your overview" accentColor={user?.color} />
+  if (loading) return <LoadingScreen />
 
   return (
     <div className="px-5 pt-2 pb-4 space-y-2.5">

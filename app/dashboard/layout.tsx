@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!loading && !user) router.replace('/')
   }, [user, loading, router])
 
-  if (loading || !user) return <LoadingScreen context="your finances" />
+  if (loading || !user) return <LoadingScreen />
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#F7F6F3', maxWidth: '100vw' }}>

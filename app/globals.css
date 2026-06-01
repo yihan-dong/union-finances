@@ -16,6 +16,9 @@
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
   }
+  button, a, [role="button"], input, select, textarea {
+    touch-action: manipulation;
+  }
   body {
     background-color: #F7F6F3;
     color: #1A1A1A;

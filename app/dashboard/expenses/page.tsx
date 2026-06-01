@@ -571,7 +571,7 @@ export default function ExpensesPage() {
         {/* Main FAB — + rotates to × when open */}
         <motion.button
           whileTap={{ scale: 0.88 }}
-          whileHover={{ scale: 1.04 }}
+          
           onClick={() => setFabOpen(v => !v)}
           className="w-14 h-14 rounded-full flex items-center justify-center text-white"
           style={{ backgroundColor: user?.color || '#534AB7', boxShadow: `0 6px 22px ${(user?.color || '#534AB7')}55`, fontSize: 28, fontWeight: 300, lineHeight: 1 }}>

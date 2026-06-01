@@ -477,7 +477,7 @@ export default function LoginPage() {
                     className="w-full py-4 rounded-2xl text-sm font-medium text-white disabled:opacity-40"
                     style={{ backgroundColor: '#1A1A1A' }}
                     whileTap={{ scale: 0.98 }}
-                    whileHover={{ opacity: 0.88 }}
+                    
                   >
                     continue
                   </motion.button>

@@ -57,11 +57,10 @@ function BudgetIcon({ active, color }: { active: boolean; color: string }) {
 function AssistantIcon({ active, color }: { active: boolean; color: string }) {
   const c = active ? color : 'rgba(0,0,0,0.28)'
   return (
-    <svg className="menu-icon-svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3.5" y="3" width="17" height="3" rx="1.5"/>
-      <path d="M5.5 6h13v14a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 20V6z"/>
-      <rect x="7" y="9" width="10" height="7" rx="1.5"/>
-      <path d="M8.5 12.5Q10.5 11 12.5 12.5Q14.5 14 16.5 12.5"/>
+    <svg className="menu-icon-svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M20 3v4"/><path d="M22 5h-4"/>
+      <path d="M4 17v2"/><path d="M5 18H3"/>
     </svg>
   )
 }

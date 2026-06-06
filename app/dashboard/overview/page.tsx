@@ -252,7 +252,7 @@ export default function OverviewPage() {
           <ShineBorder shineColor="#1D9E75" duration={20} />
           <p className="text-[9px] uppercase tracking-widest mb-2" style={{ color: 'rgba(0,0,0,0.3)' }}>income</p>
           <p className="text-lg font-semibold leading-none" style={{ color: '#1D9E75' }}>
-            +{formatCurrency(totalIncome)}
+            {formatCurrency(totalIncome)}
           </p>
           <p className="text-[9px] mt-1.5" style={{ color: 'rgba(0,0,0,0.3)' }}>
             {incomes.length} source{incomes.length !== 1 ? 's' : ''}
@@ -283,7 +283,7 @@ export default function OverviewPage() {
             </p>
             <p className="text-3xl font-semibold tracking-tight leading-none"
               style={{ color: saved >= 0 ? '#1D9E75' : '#EF4444' }}>
-              {saved < 0 ? '−' : '+'}{formatCurrency(Math.abs(saved))}
+              {saved < 0 ? '−' : ''}{formatCurrency(Math.abs(saved))}
             </p>
           </div>
           {totalIncome > 0 && (

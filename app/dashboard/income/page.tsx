@@ -8,6 +8,7 @@ import type { Income, IncomeType, UserIdentity } from '@/lib/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { IncomeTypeIcon } from '@/components/icons'
 import Portal from '@/components/Portal'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const INCOME_TYPES: IncomeType[] = ['salary', 'freelance', 'investment', 'gift', 'other']
 
@@ -323,12 +324,9 @@ export default function IncomePage() {
                 </div>
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>date</label>
-                <input
-                  type="date" value={form.date}
-                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }}
-                />
+                <div className="mb-4">
+                  <DatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} placeholder="pick a date" accentColor={user?.color} fullWidth />
+                </div>
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>whose income</label>
                 <div className="flex gap-2 mb-4">

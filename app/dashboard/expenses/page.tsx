@@ -8,6 +8,7 @@ import type { Expense, ExpenseCategory, BucketType, UserIdentity, CurrencyType, 
 import { formatCurrency, formatDate, toUSD } from '@/lib/utils'
 import { CategoryIcon, HouseIcon, StarIcon, PencilIcon } from '@/components/icons'
 import LoadingOverlay from '@/components/LoadingOverlay'
+import { DatePicker } from '@/components/ui/date-picker'
 import Portal from '@/components/Portal'
 
 const CATEGORIES: ExpenseCategory[] = [
@@ -694,9 +695,9 @@ export default function ExpensesPage() {
 
                 {/* Date */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>date</label>
-                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  className="w-full px-4 rounded-2xl mb-4 outline-none text-sm"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A', height: 46, fontSize: 14, WebkitAppearance: 'none', appearance: 'none' }} />
+                <div className="mb-4">
+                  <DatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} placeholder="pick a date" accentColor={user?.color} fullWidth />
+                </div>
 
                 {/* Paid by */}
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>paid from</label>

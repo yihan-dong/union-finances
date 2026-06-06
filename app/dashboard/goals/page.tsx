@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShineBorder } from '@/components/ui/shine-border'
 import type { Goal } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const GOAL_COLORS = ['#534AB7','#1D9E75','#F59E0B','#EC4899','#3B82F6','#8B5CF6','#14B8A6','#F97316']
 
@@ -271,10 +272,9 @@ export default function GoalsPage() {
                 </div>
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>deadline (optional)</label>
-                <input type="date" value={form.deadline}
-                  onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-2xl mb-4 outline-none text-sm"
-                  style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)', color: '#1A1A1A' }} />
+                <div className="mb-4">
+                  <DatePicker value={form.deadline} onChange={v => setForm(f => ({ ...f, deadline: v }))} placeholder="no deadline" accentColor={user?.color} fullWidth />
+                </div>
 
                 <label className="text-[10px] uppercase tracking-widest mb-2 block" style={{ color: 'rgba(0,0,0,0.3)' }}>color</label>
                 <div className="flex flex-wrap gap-2 mb-6">

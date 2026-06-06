@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/lib/context'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Expense, Income, Budget } from '@/lib/types'
+import type { Expense, Income, Budget, Goal } from '@/lib/types'
 import { formatCurrency, toUSD } from '@/lib/utils'
 
 interface Message {
@@ -136,6 +136,8 @@ export default function AssistantPage() {
       const expR  = await supabase.from('expenses').select('*').eq('couple', cv).gte('date', startDate).lte('date', endDate)
       const incR  = await supabase.from('income').select('*').eq('couple', cv).gte('date', startDate).lte('date', endDate)
       const budR  = await supabase.from('budgets').select('*').eq('couple', cv).eq('month', month).eq('year', year)
+      const goalR = await supabase.from('goals').select('*').eq('couple', cv)
+      const memR  = await supabase.from('assistant_memory').select('*').eq('couple', cv).eq('app', 'finances').order('created_at', { ascending: false }).limit(30)
 
       const expFB = (expR.error || !expR.data?.length) ? await supabase.from('expenses').select('*').gte('date', startDate).lte('date', endDate) : expR
       const incFB = (incR.error || !incR.data?.length) ? await supabase.from('income').select('*').gte('date', startDate).lte('date', endDate) : incR
@@ -144,6 +146,8 @@ export default function AssistantPage() {
       const expenses = (expFB.data as Expense[]) || []
       const incomes  = (incFB.data as Income[])  || []
       const budgets  = (budFB.data as Budget[])  || []
+      const goals    = (goalR.data as Goal[])     || []
+      const memories = (memR.data as { fact: string }[]) || []
 
       const totalIncome = incomes.reduce((s, i) => s + Number(i.amount), 0)
       const totalExpenses = expenses.reduce((s, e) => s + toUSD(Number(e.amount), e.currency || 'USD'), 0)
@@ -161,11 +165,19 @@ export default function AssistantPage() {
         return `  ${b.category}: $${spent.toFixed(0)} / $${Number(b.monthly_limit).toFixed(0)} (${pct}%)`
       }).join('\n')
 
+      const goalLines = goals.map(g => {
+        const pct = Math.round((Number(g.current_amount) / Number(g.target_amount)) * 100)
+        const deadline = g.deadline ? ` | due ${g.deadline}` : ''
+        return `  ${g.name}: $${Number(g.current_amount).toFixed(0)} / $${Number(g.target_amount).toFixed(0)} (${pct}%)${deadline}`
+      }).join('\n')
+
       const allTx = expenses.map(e => {
         const usdAmt = toUSD(Number(e.amount), e.currency || 'USD')
         const note = e.currency === 'KHR' ? ` (${formatCurrency(Number(e.amount), 'KHR')} → $${usdAmt.toFixed(2)})` : ''
         return `  ${e.date} | ${e.description} | ${formatCurrency(Number(e.amount), e.currency || 'USD')}${note} | ${e.category} | paid by ${e.paid_by}`
       }).join('\n')
+
+      const memoryLines = memories.map(m => `• ${m.fact}`).join('\n')
 
       setContext(`${now.toLocaleString('default', { month: 'long' })} ${year} summary for ${user?.name} (${user?.couple}):
 - Income: ${formatCurrency(totalIncome)}
@@ -173,9 +185,44 @@ export default function AssistantPage() {
 - Balance: ${balance >= 0 ? '+' : ''}${formatCurrency(balance)}
 - Top categories: ${topCategories.map(([cat, amt]) => `${cat} ($${amt.toFixed(0)})`).join(', ')}
 ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set yet'}
-- All transactions this month:\n${allTx || '  (none)'}`)
+${goalLines ? `- Savings goals:\n${goalLines}` : '- No goals set yet'}
+- All transactions this month:\n${allTx || '  (none)'}
+${memoryLines ? `\n=== MEMORY FROM PAST CONVERSATIONS ===\n${memoryLines}` : ''}`)
     } catch {
       // context stays empty, API will still work
+    }
+  }
+
+  async function maybeSaveMemory(msgs: Message[]) {
+    const userMsgs = msgs.filter(m => m.role === 'user')
+    if (userMsgs.length === 0 || userMsgs.length % 4 !== 0) return
+
+    const cv = user?.couple ?? 'union'
+    const lastSix = msgs.slice(-6)
+    const extractPrompt = `Based on this conversation excerpt about finances, extract 1-2 key facts worth remembering about Yihan and Sun's financial habits, preferences, or goals. Reply ONLY with a JSON array of strings. If nothing is worth saving, reply with [].
+
+Conversation:
+${lastSix.map(m => `${m.role}: ${m.text}`).join('\n')}`
+
+    try {
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message: extractPrompt, context: '', history: [] }),
+      })
+      const data = await res.json()
+      const raw = data.reply || ''
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (!match) return
+      const facts: string[] = JSON.parse(match[0])
+      if (!Array.isArray(facts) || facts.length === 0) return
+      for (const fact of facts) {
+        if (typeof fact === 'string' && fact.trim()) {
+          await supabase.from('assistant_memory').insert({ couple: cv, app: 'finances', fact: fact.trim() })
+        }
+      }
+    } catch {
+      // background — silent failure
     }
   }
 
@@ -220,7 +267,8 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set yet'}
       imagePreview: pendingImage?.preview || undefined,
       timestamp: new Date(),
     }
-    setMessages(prev => [...prev, userMsg])
+    const updatedMessages = [...messages, userMsg]
+    setMessages(updatedMessages)
     setInput('')
     const imgPayload = pendingImage
     setPendingImage(null)
@@ -230,15 +278,25 @@ ${budgetLines ? `- Budgets:\n${budgetLines}` : '- No budgets set yet'}
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: messageText, context, image: imgPayload?.base64, mimeType: imgPayload?.mimeType }),
+        body: JSON.stringify({
+          message: messageText,
+          context,
+          history: updatedMessages.slice(-20).map(m => ({ role: m.role, text: m.text })),
+          image: imgPayload?.base64,
+          mimeType: imgPayload?.mimeType,
+        }),
       })
       const data = await res.json()
-      setMessages(prev => [...prev, {
+      const assistantMsg: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
         text: data.reply || 'No response.',
         timestamp: new Date(),
-      }])
+      }
+      const finalMessages = [...updatedMessages, assistantMsg]
+      setMessages(finalMessages)
+      // Background memory extraction — don't await
+      maybeSaveMemory(finalMessages)
     } catch {
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),

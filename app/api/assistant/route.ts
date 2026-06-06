@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const { message, context, image, mimeType } = await req.json()
+  const { message, context, history, image, mimeType } = await req.json()
   if (!message && !image) return NextResponse.json({ reply: 'No message provided.' }, { status: 400 })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -9,21 +9,22 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const systemPrompt = `You are a sharp, friendly financial assistant for a couple using the Union Finances app in Phnom Penh, Cambodia. Help them understand spending, save money, and make smart financial decisions.
+  const systemPrompt = `You are the financial mind inside Union Finances — a sharp, honest money advisor for Yihan and Sun in Phnom Penh, Cambodia.
+
+You know their actual numbers: income sources, spending by category, savings rate, goals, and patterns. You use their data to give specific, real advice — not generic financial tips.
 
 Today: ${today}
-Currency: USD and KHR (Khmer Riel). 1 USD ≈ 4,100 KHR.
+Exchange rate: 1 USD ≈ 4,100 KHR
 
-Their financial data this month:
+Their financial picture right now:
 ${context || 'No data loaded yet — answer generally.'}
 
-Guidelines:
-- Be concise and conversational — 2–4 sentences unless they want detail
-- Use their actual numbers when relevant
-- Give specific, actionable advice
-- If they share a photo, identify the product and estimate Cambodia market price
-- No generic platitudes — be direct and honest
-- If data is missing just say so`
+How to respond:
+- Direct and clear. Give specific numbers when you can.
+- Notice patterns (overspending, missed savings, goal progress) and call them out.
+- 2–4 sentences unless they want a breakdown.
+- You remember what was said earlier in this conversation.
+- Both Yihan and Sun use this app. Tailor to whoever is asking when relevant.`
 
   const userContent: { type: string; [key: string]: unknown }[] = []
 
@@ -46,6 +47,15 @@ Guidelines:
     text: message || 'What is this and what would it cost in Phnom Penh, Cambodia?',
   })
 
+  const priorTurns = Array.isArray(history) ? history : []
+  const messages = [
+    ...priorTurns.map((m: { role: string; text: string }) => ({
+      role: m.role as 'user' | 'assistant',
+      content: [{ type: 'text', text: m.text }],
+    })),
+    { role: 'user' as const, content: userContent },
+  ]
+
   try {
     const headers: Record<string, string> = {
       'x-api-key': apiKey,
@@ -65,7 +75,7 @@ Guidelines:
         model: 'claude-haiku-4-5',
         max_tokens: 1024,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userContent }],
+        messages,
       }),
     })
 
